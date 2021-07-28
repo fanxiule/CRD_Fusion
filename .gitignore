@@ -1,0 +1,10 @@
+.idea/
+__pycache__/
+models/
+/data_preprocess/__pycache__/
+/datasets/__pycache__/
+/models/__pycache__/
+*.npy
+TODO_things.txt
+/data_preprocess/ad_census/
+*SGBM_study*

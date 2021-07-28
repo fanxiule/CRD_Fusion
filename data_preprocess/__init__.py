@@ -1,0 +1,3 @@
+from .sceneflow_preprocessor import SceneFlowPreprocessor
+from .kitti2015_preprocessor import Kitti15Preprocessor
+from .kitti2012_preprocessor import Kitti12Preprocessor

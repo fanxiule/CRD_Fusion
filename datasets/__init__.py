@@ -1,0 +1,5 @@
+from .sceneflow_dataset import SceneFlowDataset
+from .kitti2015_dataset import Kitti2015Dataset
+from .kitti2012_dataset import Kitti2012Dataset
+from .kitti2015test_dataset import KITTI2015TestDataset
+from .kitti2012test_dataset import KITTI2012TestDataset
