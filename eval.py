@@ -77,20 +77,20 @@ def log_event(writer, inputs, outputs, final_err, refined_err, detect_occ, max_d
     :param step: current step number
     :return: None
     """
-    writer.add_scalar("Final EPE", final_err['epe'].item(), step)
-    writer.add_scalar("Final Bad3", final_err['bad3'].item(), step)
+    writer.add_scalar("Final EPE", final_err['epe'], step)
+    writer.add_scalar("Final Bad3", final_err['bad3'], step)
     if final_err['err_map'] is not None:
         writer.add_image("Final Error Map", final_err['err_map'][0] / max_disp, step)
 
-    writer.add_scalar("Refined EPE", refined_err['epe'].item(), step)
-    writer.add_scalar("Refined Bad3", refined_err['bad3'].item(), step)
+    writer.add_scalar("Refined EPE", refined_err['epe'], step)
+    writer.add_scalar("Refined Bad3", refined_err['bad3'], step)
     if refined_err['err_map'] is not None:
         writer.add_image("Refined Error Map", refined_err['err_map'][0] / max_disp, step)
 
     for k, v in inputs.items():
         if k == "gt_disp" or k == "noc_gt_disp":
             writer.add_image("input_%s" % k, v[0] / max_disp, step)
-        elif k != "frame_id":
+        elif k != "frame_id" and k != "top_pad" and k != "left_pad":
             writer.add_image("input_%s" % k, v[0], step)
 
     for s in scale_list:
@@ -157,11 +157,11 @@ def evaluate(opts):
     data_path = os.path.join(opts.data_path, opts.dataset)
     eval_dataset = dataset(data_path, opts.max_disp, opts.downscale, opts.resized_height, opts.resized_width,
                            opts.conf_threshold, False, opts.imagenet_norm)
-    eval_loader = DataLoader(eval_dataset, opts.batch_size, False, num_workers=opts.num_workers, pin_memory=True,
+    eval_loader = DataLoader(eval_dataset, 1, False, num_workers=opts.num_workers, pin_memory=True,
                              drop_last=False)
     num_eval_samples = len(eval_dataset)
     num_valid_samples = num_eval_samples
-    num_total_steps = num_eval_samples // opts.batch_size
+    num_total_steps = num_eval_samples
 
     print("Begin evalutating %s" % opts.model_name)
     print("Use checkpt in: %s" % opts.checkpt)
@@ -261,15 +261,15 @@ def evaluate(opts):
                 log_event(writer, inputs, outputs, avg_final, avg_refined, opts.occ_detection,
                           opts.max_disp / opts.downscale, feature_scale_list, current_step)
 
-    raw_disp_bad3 = raw_disp_bad3 / num_eval_samples
-    final_epe = final_err['epe'] / num_eval_samples
-    final_bad3 = final_err['bad3'] / num_eval_samples
-    refined_epe = refined_err['epe'] / num_eval_samples
-    refined_bad3 = refined_err['bad3'] / num_eval_samples
-    final_noc_epe = final_noc_err['epe'] / num_eval_samples
-    final_noc_bad3 = final_noc_err['bad3'] / num_eval_samples
-    refined_noc_epe = refined_noc_err['epe'] / num_eval_samples
-    refined_noc_bad3 = refined_noc_err['bad3'] / num_eval_samples
+    raw_disp_bad3 = raw_disp_bad3 / num_valid_samples
+    final_epe = final_err['epe'] / num_valid_samples
+    final_bad3 = final_err['bad3'] / num_valid_samples
+    refined_epe = refined_err['epe'] / num_valid_samples
+    refined_bad3 = refined_err['bad3'] / num_valid_samples
+    final_noc_epe = final_noc_err['epe'] / num_valid_samples
+    final_noc_bad3 = final_noc_err['bad3'] / num_valid_samples
+    refined_noc_epe = refined_noc_err['epe'] / num_valid_samples
+    refined_noc_bad3 = refined_noc_err['bad3'] / num_valid_samples
     frame_rate = num_valid_samples / total_time
 
     print("Raw disparity Bad3: %.4f" % raw_disp_bad3)

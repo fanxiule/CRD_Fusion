@@ -57,9 +57,9 @@ class CRDFusionTrainer:
             self.loss = SupLoss(self.feature_scale_list)
         else:
             self.loss = SelfSupLoss(self.opt.supervision_weight, self.opt.photo_weight, self.opt.smooth_weight,
-                                    self.opt.occ_weight, self.opt.max_disp / self.opt.downscale,
+                                    self.opt.left_weight, self.opt.occ_weight, self.opt.max_disp / self.opt.downscale,
                                     self.feature_scale_list, self.opt.resized_height, self.opt.resized_width,
-                                    self.opt.occ_detection, self.opt.loss_fusion)
+                                    self.opt.occ_detection, self.opt.occ_epoch, self.opt.loss_fusion)
         self.loss.to(self.opt.device)
 
         # optimization
@@ -82,7 +82,7 @@ class CRDFusionTrainer:
 
         train_dataset = self.dataset(data_path, self.opt.max_disp, self.opt.downscale, self.opt.resized_height,
                                      self.opt.resized_width, self.opt.conf_threshold, True, self.opt.imagenet_norm,
-                                     False)
+                                     True)
         val_dataset = self.dataset(data_path, self.opt.max_disp, self.opt.downscale, self.opt.resized_height,
                                    self.opt.resized_width, self.opt.conf_threshold, False, self.opt.imagenet_norm)
         self.train_loader = DataLoader(train_dataset, self.opt.batch_size, True, num_workers=self.opt.num_workers,
@@ -131,8 +131,10 @@ class CRDFusionTrainer:
         print("Occlusion threshold used in post processing: %.2f" % self.opt.occ_threshold)
         print("Post processing: %r" % self.opt.post_processing)
         print("Supervised training: %r" % self.opt.supervised)
-        print("Loss function weighting (if applicable): %.2f, %.2f, %.2f, %.2f" % (
-            self.opt.supervision_weight, self.opt.photo_weight, self.opt.smooth_weight, self.opt.occ_weight))
+        print("Loss function weighting (if applicable): %.2f, %.2f, %.2f, %.2f, %.2f" % (
+            self.opt.supervision_weight, self.opt.photo_weight, self.opt.smooth_weight, self.opt.left_weight,
+            self.opt.occ_weight))
+        print("Apply occlusion mask in supervision/left loss from epoch: %d" % self.opt.occ_epoch)
         # Note that when occ_detection is False or loss_fusion is False, their corresponding weights would become 0 in
         # the loss function, even if they are shown as non-zero here
 
@@ -187,7 +189,6 @@ class CRDFusionTrainer:
             if log_flag:
                 self.log_time(batch_id, duration, losses['total_loss'])
 
-                # TODO Remove this in actual training, only calculate errors in val()
                 if 'gt_disp' in inputs:
                     refined_errors = self.compute_disp_err(inputs['gt_disp'], outputs['refined_disp0'])
                     final_errors = self.compute_disp_err(inputs['gt_disp'], outputs['final_disp'])
@@ -198,8 +199,8 @@ class CRDFusionTrainer:
                 self.log("train", inputs, outputs, losses, refined_errors, final_errors)
                 self.val()
 
-            # print("Training loss at epoch %d step %d: %.4f" % (
-            #     self.current_epoch + 1, self.current_step, losses["total_loss"].item()))
+            print("Training loss at epoch %d step %d: %.4f" % (
+                self.current_epoch + 1, self.current_step, losses["total_loss"].item()))
 
     def process_batch(self, inputs):
         """
@@ -217,7 +218,8 @@ class CRDFusionTrainer:
         if self.opt.supervised:
             losses = self.loss(outputs, inputs['gt_disp'])
         else:
-            losses = self.loss(inputs['l_rgb'], inputs['r_rgb'], inputs['raw_disp'], inputs['mask'], outputs)
+            losses = self.loss(inputs['l_rgb'], inputs['r_rgb'], inputs['raw_disp'], inputs['mask'], outputs,
+                               self.current_epoch + 1)
         if "top_pad" in inputs:
             unpad_imgs(inputs, outputs)
         if self.opt.occ_detection and self.opt.post_processing and (not self.opt.supervised):
@@ -296,12 +298,12 @@ class CRDFusionTrainer:
         """
         writer = self.writers[mode]
         for k, v in losses.items():
-            writer.add_scalar(k, v.item(), self.current_step)
+            writer.add_scalar(k, v, self.current_step)
 
         if refined_errors is not None:
             for k, v in refined_errors.items():
                 if k != "err_map":
-                    writer.add_scalar("refined_%s" % k, v.item(), self.current_step)
+                    writer.add_scalar("refined_%s" % k, v, self.current_step)
                 else:
                     writer.add_image("refined_error_map", (v[0] / (self.opt.max_disp / self.opt.downscale)),
                                      self.current_step)
@@ -309,7 +311,7 @@ class CRDFusionTrainer:
         if final_errors is not None:
             for k, v in final_errors.items():
                 if k != "err_map":
-                    writer.add_scalar("final_%s" % k, v.item(), self.current_step)
+                    writer.add_scalar("final_%s" % k, v, self.current_step)
                 else:
                     writer.add_image("final_error_map", (v[0] / (self.opt.max_disp / self.opt.downscale)),
                                      self.current_step)

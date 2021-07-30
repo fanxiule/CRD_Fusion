@@ -43,7 +43,10 @@ def compute_raw_disp_err(raw_disp, gt_disp, max_disp_ds):
     diff = torch.abs(rescale_raw_disp - gt_disp)
     diff = torch.mul(valid_mask, diff)
     bad3 = diff > 3.0
-    bad3 = torch.sum(bad3) / valid_pixels * 100.0
+    if valid_pixels == 0:
+        bad3 = 0
+    else:
+        bad3 = torch.sum(bad3) / valid_pixels * 100.0
     return bad3
 
 

@@ -85,11 +85,15 @@ class SceneFlowDataset(CRDFusionDataset):
         gt_disp_path = os.path.join(self.data_path, subset, "disparity", path, "left", "%s.pfm" % frame_id)
         raw_inputs['gt_disp'] = self._get_gt_disp(gt_disp_path)
 
-        if (self.orig_width / self.downscale - self.resized_width) >= 0 and (
-                self.orig_height / self.downscale - self.resized_height) >= 0:
+        if ((self.orig_width // self.downscale - self.resized_width) >= 0 and (
+                self.orig_height // self.downscale - self.resized_height) > 0) or (
+                (self.orig_width // self.downscale - self.resized_width) > 0 and (
+                self.orig_height // self.downscale - self.resized_height) >= 0):
             inputs = self._crop_inputs(raw_inputs)
-        elif (self.orig_width / self.downscale - self.resized_width) < 0 and (
-                self.orig_height / self.downscale - self.resized_height) < 0:
+        elif ((self.orig_width // self.downscale - self.resized_width) <= 0 and (
+                self.orig_height // self.downscale - self.resized_height) < 0) or (
+                (self.orig_width // self.downscale - self.resized_width) < 0 and (
+                self.orig_height // self.downscale - self.resized_height) <= 0):
             inputs = self._pad_inputs(raw_inputs)
         else:
             print("Inconsistent image resizing scheme")

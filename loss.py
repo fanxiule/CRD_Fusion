@@ -39,37 +39,43 @@ class SSIM(nn.Module):
 
 
 class SelfSupLoss(nn.Module):
-    def __init__(self, alpha_disp, alpha_warp, alpha_smooth, alpha_occ, max_disp, scale_list, resized_h, resized_w,
-                 detect_occ, fusion=True):
+    def __init__(self, alpha_disp, alpha_warp, alpha_smooth, alpha_left, alpha_occ, max_disp, scale_list, resized_h,
+                 resized_w, detect_occ, occ_epoch, fusion=True):
         """
         A module to compute the self-supervised training loss
 
         :param alpha_disp: weight for the raw disparity supervision loss
         :param alpha_warp: weight for the photometric reconstruction loss
         :param alpha_smooth: weight for the predicted disparity smoothness loss
+        :param alpha_left: weight for the left smoothness loss
         :param alpha_occ: weight for the predicted occlusion mask cross entropy loss
         :param max_disp: maximum number of disparities after downscaling is applied
         :param scale_list: list of exponents for all feature scales used in the network, e.g. [0, 3] or [0, 1, 2, 3]
         :param resized_h: image height after downscaling and resizing
         :param resized_w: image width after downscaling and resizing
         :param detect_occ: if set to True, the occlusion mask is generated and applied to training loss
+        :param occ_epoch: a preset epoch number. When current epoch is greater than the preset one, apply left loss and occlusion mask in supervision loss
         :param fusion: if set to True, raw disparity fusion is applied to loss computation
         """
         super(SelfSupLoss, self).__init__()
         self.alpha_disp = alpha_disp
         self.alpha_warp = alpha_warp
         self.alpha_smooth = alpha_smooth
+        self.alpha_left = alpha_left
         self.alpha_occ = alpha_occ
         self.bce = nn.BCELoss(reduction='sum')
 
         self.max_disp = max_disp
         self.scale_list = scale_list
         self.detect_occ = detect_occ
+        self.occ_epoch = occ_epoch
+        self.current_epoch = 0
         self.fusion = fusion
         if not self.fusion:
             self.alpha_disp = 0  # disable raw disparity supervision with no fusion
         if not self.detect_occ:
             self.alpha_occ = 0  # disable occlusion cross entropy loss when detect occlusion is disabled
+            self.alpha_left = 0  # no occlusion mask detection means no left smoothness loss can be computed
 
         self.upsample = {}
         for s in self.scale_list:
@@ -83,6 +89,7 @@ class SelfSupLoss(nn.Module):
         self.img_sobel_y = torch.tensor([[-1, -2, -1], [0, 0, 0], [1, 2, 1]], dtype=torch.float32).expand(3, 1, 3, 3)
         self.disp_grad_x = torch.tensor([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], dtype=torch.float32).expand(1, 1, 3, 3)
         self.disp_grad_y = torch.tensor([[-1, -2, -1], [0, 0, 0], [1, 2, 1]], dtype=torch.float32).expand(1, 1, 3, 3)
+        self.left_smooth = torch.tensor([[-1, 0, 0], [-2, 4, 0], [-1, 0, 0]], dtype=torch.float32).expand(1, 1, 3, 3)
 
         # for bilinear sampling
         grid_y = torch.linspace(0, resized_h - 1, resized_h)
@@ -112,11 +119,13 @@ class SelfSupLoss(nn.Module):
         self.img_sobel_y = self.img_sobel_y.to(*args, **kwargs)
         self.disp_grad_x = self.disp_grad_x.to(*args, **kwargs)
         self.disp_grad_y = self.disp_grad_y.to(*args, **kwargs)
+        self.left_smooth = self.left_smooth.to(*args, **kwargs)
 
     @staticmethod
-    def _cal_img_grad(img, kernel):
+    def _cal_img_smoothness(img, kernel):
         """
-        Approximate image gradient with the provided filter
+        Approximate image smoothness with the provided filter
+
         :param img: image for gradient computation
         :param kernel: kernel for gradient approximation
         :return: approximated image gradient
@@ -126,6 +135,20 @@ class SelfSupLoss(nn.Module):
         grad = f.conv2d(img, kernel, stride=1, padding=pad, groups=group)
         grad = torch.linalg.norm(grad, ord=1, dim=1, keepdim=True)
         return grad
+
+    def _cal_left_smooth(self, disp, occ):
+        """
+        Enforce disparity smoothness according to disparity on the left foroccluded region
+
+        :param disp: disparity map
+        :param occ: occlusion mask
+        :return: left smoothness loss
+        """
+        left_smooth = self._cal_img_smoothness(disp, self.left_smooth)
+        occ_local = occ.detach()
+        left_smooth = torch.mul(left_smooth, 1 - occ_local)
+        left_smooth = torch.sum(left_smooth)
+        return left_smooth
 
     def _reconstruct_image(self, src, disp, batch):
         """
@@ -173,17 +196,21 @@ class SelfSupLoss(nn.Module):
         recon_loss = torch.sum(recon_loss)
         return recon_loss
 
-    def _cal_supervision_loss(self, raw_disp, conf_mask, pred_disp):
+    def _cal_supervision_loss(self, raw_disp, conf_mask, pred_disp, occ):
         """
         Calculate disparity supervision loss where supervision is from the raw disparity
 
         :param raw_disp: disparity generated by traditional stereo matching or sensor
         :param conf_mask: confidence mask tensor for the raw disparity
-        :param pred_disp: predicted disparity tensor
+        :param pred_disp: predicted disparity tensor:
+        :param occ: occlusion mask
         :return: supervision loss
         """
         supervision_loss = self.smoothL1(raw_disp, pred_disp)
         supervision_loss = torch.mul(supervision_loss, conf_mask)
+        if self.current_epoch > self.occ_epoch:
+            occ_local = occ.detach()
+            supervision_loss = torch.mul(supervision_loss, occ_local)
         supervision_loss = torch.sum(supervision_loss)
         return supervision_loss
 
@@ -196,8 +223,8 @@ class SelfSupLoss(nn.Module):
         :param img_y_grad: image gradient in y direction
         :return: smoothness loss
         """
-        disp_smooth_x = self._cal_img_grad(pred_disp, self.disp_grad_x)
-        disp_smooth_y = self._cal_img_grad(pred_disp, self.disp_grad_y)
+        disp_smooth_x = self._cal_img_smoothness(pred_disp, self.disp_grad_x)
+        disp_smooth_y = self._cal_img_smoothness(pred_disp, self.disp_grad_y)
 
         disp_smooth_x *= torch.exp(-img_x_grad)
         disp_smooth_y *= torch.exp(-img_y_grad)
@@ -216,7 +243,7 @@ class SelfSupLoss(nn.Module):
         mask_loss = self.bce(occ, target)
         return mask_loss
 
-    def forward(self, l_rgb, r_rgb, raw_disp, conf, pred):
+    def forward(self, l_rgb, r_rgb, raw_disp, conf, pred, epoch):
         """
         Forward pass to calculate training loss for a batch
 
@@ -225,13 +252,15 @@ class SelfSupLoss(nn.Module):
         :param raw_disp: raw disparity tensor from traditional stereo matching/sensor
         :param conf: confidence mask tensor
         :param pred: model prediction at all image resolutions of interest
+        :param epoch: current epoch number
         :return: training losses including total loss, supervision loss, photometric loss and smoothness loss
         """
         losses = {}
         batch_num = l_rgb.size()[0]
+        self.current_epoch = epoch
 
-        img_grad_x = self._cal_img_grad(l_rgb, self.img_sobel_x)
-        img_grad_y = self._cal_img_grad(l_rgb, self.img_sobel_y)
+        img_grad_x = self._cal_img_smoothness(l_rgb, self.img_sobel_x)
+        img_grad_y = self._cal_img_smoothness(l_rgb, self.img_sobel_y)
         occlusion_mask = torch.ones_like(pred['refined_disp0'])
         if not self.fusion:
             conf_mask = torch.ones_like(conf)
@@ -241,6 +270,7 @@ class SelfSupLoss(nn.Module):
         disp_sup_loss = 0
         reconstruct_loss = 0
         smoothness_loss = 0
+        left_smooth_loss = 0
         bce_loss = 0
         for s in self.scale_list:
             up_pred_disp = self.upsample['up%d' % s](pred['refined_disp%d' % s])
@@ -248,18 +278,23 @@ class SelfSupLoss(nn.Module):
             weight = 1 / (2 ** s)
             if self.detect_occ:
                 occlusion_mask = self.upsample['up%d' % s](pred['occ%d' % s])
-            disp_sup_loss += weight * self._cal_supervision_loss(self.max_disp * raw_disp, conf_mask, up_pred_disp)
+                bce_loss += weight * self._cal_mask_loss(occlusion_mask)
+                if self.current_epoch > self.occ_epoch:
+                    left_smooth_loss += weight * self._cal_left_smooth(up_pred_disp, occlusion_mask)
+            disp_sup_loss += weight * self._cal_supervision_loss(self.max_disp * raw_disp, conf_mask, up_pred_disp,
+                                                                 occlusion_mask)
             reconstruct_loss += weight * self._cal_reconstruct_loss(l_rgb, r_rgb, up_pred_disp, batch_num, conf_mask,
                                                                     occlusion_mask)
             smoothness_loss += weight * self._cal_smoothness_loss(up_pred_disp, img_grad_x, img_grad_y)
-            bce_loss += weight * self._cal_mask_loss(occlusion_mask)
 
         total_px = torch.numel(pred['refined_disp0']) * len(self.scale_list)
         losses['disp_loss'] = self.alpha_disp * disp_sup_loss
         losses['photo_loss'] = self.alpha_warp * reconstruct_loss
         losses['smooth_loss'] = self.alpha_smooth * smoothness_loss
+        losses['left_loss'] = self.alpha_left * left_smooth_loss
         losses['occ_loss'] = self.alpha_occ * bce_loss
-        losses['total_loss'] = losses['disp_loss'] + losses['photo_loss'] + losses['smooth_loss'] + losses['occ_loss']
+        losses['total_loss'] = losses['disp_loss'] + losses['photo_loss'] + losses['smooth_loss'] + losses[
+            'left_loss'] + losses['occ_loss']
         losses['total_loss'] /= total_px
         return losses
 

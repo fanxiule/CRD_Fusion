@@ -54,10 +54,6 @@ class EvalOptions:
         self.parser.add_argument("--save_disp",
                                  action="store_true",
                                  help="if set, the predicted disparity maps are saved in .npy format")
-        self.parser.add_argument("--batch_size",
-                                 type=int,
-                                 help="batch size",
-                                 default=1)
         self.parser.add_argument("--device",
                                  type=str,
                                  help="evaluation device",
