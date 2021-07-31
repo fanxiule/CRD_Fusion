@@ -82,7 +82,7 @@ class CRDFusionTrainer:
 
         train_dataset = self.dataset(data_path, self.opt.max_disp, self.opt.downscale, self.opt.resized_height,
                                      self.opt.resized_width, self.opt.conf_threshold, True, self.opt.imagenet_norm,
-                                     True)
+                                     False)
         val_dataset = self.dataset(data_path, self.opt.max_disp, self.opt.downscale, self.opt.resized_height,
                                    self.opt.resized_width, self.opt.conf_threshold, False, self.opt.imagenet_norm)
         self.train_loader = DataLoader(train_dataset, self.opt.batch_size, True, num_workers=self.opt.num_workers,
@@ -199,8 +199,8 @@ class CRDFusionTrainer:
                 self.log("train", inputs, outputs, losses, refined_errors, final_errors)
                 self.val()
 
-            print("Training loss at epoch %d step %d: %.4f" % (
-                self.current_epoch + 1, self.current_step, losses["total_loss"].item()))
+            # print("Training loss at epoch %d step %d: %.4f" % (
+            #     self.current_epoch + 1, self.current_step, losses["total_loss"].item()))
 
     def process_batch(self, inputs):
         """
