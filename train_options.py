@@ -135,8 +135,9 @@ class TrainOptions:
                                  default=0.2)  # may need higher > 0.5 for KITTI, 0.7 is too much
         self.parser.add_argument("--occ_epoch",
                                  type=int,
-                                 help="after the specified epoch number, occlusion is applied to supervision and left losses",
-                                 default=None)
+                                 help="after the specified epoch number, occlusion is applied to supervision and left "
+                                      "losses. Set it to negative to disable this action",
+                                 default=-1)
 
         # SYSTEM options
         self.parser.add_argument("--device",
@@ -152,8 +153,7 @@ class TrainOptions:
         # LOADING Options
         self.parser.add_argument("--pretrained_model_path",
                                  type=str,
-                                 help="path to the pretrained model to be loaded for fine tuning or evaluation",
-                                 default="/home/xfan/Documents/Avidbots/Experiments/CRD_Fusion/models/pretrained/weights_12")
+                                 help="path to the pretrained model to be loaded for fine tuning or evaluation")
 
         # LOGGING options
         self.parser.add_argument("--early_log_frequency",
