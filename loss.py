@@ -145,8 +145,7 @@ class SelfSupLoss(nn.Module):
         :return: left smoothness loss
         """
         left_smooth = self._cal_img_smoothness(disp, self.left_smooth)
-        occ_local = occ.detach()
-        left_smooth = torch.mul(left_smooth, 1 - occ_local)
+        left_smooth = torch.mul(left_smooth, 1 - occ)
         left_smooth = torch.sum(left_smooth)
         return left_smooth
 
@@ -208,13 +207,12 @@ class SelfSupLoss(nn.Module):
         """
         supervision_loss = self.smoothL1(raw_disp, pred_disp)
         supervision_loss = torch.mul(supervision_loss, conf_mask)
-        if self.current_epoch > self.occ_epoch:
-            occ_local = occ.detach()
-            supervision_loss = torch.mul(supervision_loss, occ_local)
+        if self.occ_epoch is not None and self.current_epoch > self.occ_epoch:
+            supervision_loss = torch.mul(supervision_loss, occ)
         supervision_loss = torch.sum(supervision_loss)
         return supervision_loss
 
-    def _cal_smoothness_loss(self, pred_disp, img_x_grad, img_y_grad):
+    def _cal_smoothness_loss(self, pred_disp, img_x_grad, img_y_grad, occ):
         """
         Calculate edge-aware predicted disparity smoothness loss
 
@@ -229,6 +227,8 @@ class SelfSupLoss(nn.Module):
         disp_smooth_x *= torch.exp(-img_x_grad)
         disp_smooth_y *= torch.exp(-img_y_grad)
         smoothness_loss = disp_smooth_x + disp_smooth_y
+        if self.occ_epoch is not None and self.current_epoch > self.occ_epoch:
+            smoothness_loss = torch.mul(smoothness_loss, 1 - occ)
         smoothness_loss = torch.sum(smoothness_loss)
         return smoothness_loss
 
@@ -279,13 +279,13 @@ class SelfSupLoss(nn.Module):
             if self.detect_occ:
                 occlusion_mask = self.upsample['up%d' % s](pred['occ%d' % s])
                 bce_loss += weight * self._cal_mask_loss(occlusion_mask)
-                if self.current_epoch > self.occ_epoch:
+                if self.occ_epoch is not None and self.current_epoch > self.occ_epoch:
                     left_smooth_loss += weight * self._cal_left_smooth(up_pred_disp, occlusion_mask)
             disp_sup_loss += weight * self._cal_supervision_loss(self.max_disp * raw_disp, conf_mask, up_pred_disp,
                                                                  occlusion_mask)
             reconstruct_loss += weight * self._cal_reconstruct_loss(l_rgb, r_rgb, up_pred_disp, batch_num, conf_mask,
                                                                     occlusion_mask)
-            smoothness_loss += weight * self._cal_smoothness_loss(up_pred_disp, img_grad_x, img_grad_y)
+            smoothness_loss += weight * self._cal_smoothness_loss(up_pred_disp, img_grad_x, img_grad_y, occlusion_mask)
 
         total_px = torch.numel(pred['refined_disp0']) * len(self.scale_list)
         losses['disp_loss'] = self.alpha_disp * disp_sup_loss

@@ -136,7 +136,7 @@ class TrainOptions:
         self.parser.add_argument("--occ_epoch",
                                  type=int,
                                  help="after the specified epoch number, occlusion is applied to supervision and left losses",
-                                 default=0)
+                                 default=None)
 
         # SYSTEM options
         self.parser.add_argument("--device",
@@ -152,7 +152,8 @@ class TrainOptions:
         # LOADING Options
         self.parser.add_argument("--pretrained_model_path",
                                  type=str,
-                                 help="path to the pretrained model to be loaded for fine tuning or evaluation")
+                                 help="path to the pretrained model to be loaded for fine tuning or evaluation",
+                                 default="/home/xfan/Documents/Avidbots/Experiments/CRD_Fusion/models/pretrained/weights_12")
 
         # LOGGING options
         self.parser.add_argument("--early_log_frequency",
@@ -162,11 +163,11 @@ class TrainOptions:
         self.parser.add_argument("--late_log_frequency",
                                  type=int,
                                  help="tensorboard logging frequency in number of batches in the late phase",
-                                 default=1000)
+                                 default=10)
         self.parser.add_argument("--early_late_split",
                                  type=int,
                                  help="logging is split into early and late phase at this batch id",
-                                 default=10000)  # TODO 2000
+                                 default=1000)  # TODO 2000
         self.parser.add_argument("--save_frequency",
                                  type=int,
                                  help="frequency in number of epochs to save a trained model",

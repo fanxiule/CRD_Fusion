@@ -112,13 +112,13 @@ class DataPreprocessor:
         l_img_mean = (1.0 * l_img_tl + 1.0 * l_img_tr + 1.0 * l_img_bl + 1.0 * l_img_br + 1.0 * l_img) / 5
         # syn_l_img in float already
         syn_l_img_mean = (syn_l_img_tl + syn_l_img_tr + syn_l_img_bl + syn_l_img_br + syn_l_img) / 5
-        ZMAD_tl = np.abs(l_img_tl - l_img_mean - syn_l_img_tl + syn_l_img_mean)
-        ZMAD_tr = np.abs(l_img_tr - l_img_mean - syn_l_img_tr + syn_l_img_mean)
-        ZMAD_bl = np.abs(l_img_bl - l_img_mean - syn_l_img_bl + syn_l_img_mean)
-        ZMAD_br = np.abs(l_img_br - l_img_mean - syn_l_img_br + syn_l_img_mean)
-        ZMAD_c = np.abs(l_img - l_img_mean - syn_l_img + syn_l_img_mean)
+        ZSAD_tl = np.abs(l_img_tl - l_img_mean - syn_l_img_tl + syn_l_img_mean)
+        ZSAD_tr = np.abs(l_img_tr - l_img_mean - syn_l_img_tr + syn_l_img_mean)
+        ZSAD_bl = np.abs(l_img_bl - l_img_mean - syn_l_img_bl + syn_l_img_mean)
+        ZSAD_br = np.abs(l_img_br - l_img_mean - syn_l_img_br + syn_l_img_mean)
+        ZSAD_c = np.abs(l_img - l_img_mean - syn_l_img + syn_l_img_mean)
 
-        ZSAD = ZMAD_tl + ZMAD_tr + ZMAD_bl + ZMAD_br + ZMAD_c
+        ZSAD = ZSAD_tl + ZSAD_tr + ZSAD_bl + ZSAD_br + ZSAD_c
         ZSAD = np.linalg.norm(ZSAD, ord=2, axis=2)
         ZSAD /= np.mean(ZSAD)
         return ZSAD
