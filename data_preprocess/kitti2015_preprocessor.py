@@ -8,7 +8,7 @@ class Kitti15Preprocessor(DataPreprocessor):
     Preprocessor for the KITTI 2012 dataset
     """
 
-    def __init__(self, dataset_path, max_disp, block_sz, match_method, split):
+    def __init__(self, dataset_path, max_disp, block_sz, match_method, device, full_ZSAD, split, seed):
         """
         Preprocessor for the Scene Flow dataset
 
@@ -16,12 +16,16 @@ class Kitti15Preprocessor(DataPreprocessor):
         :param max_disp: maximum disparity to check when matching
         :param block_sz: block size for the stereo algorithm
         :param match_method: choose between local_BM and SG_BM for local or semi-global block matching
+        :param device: device to compute confidence measures, choose between cuda and cpu
+        :param full_ZSAD: if set to True, ZSAD is performed on a 3x3 window. Otherwise, it is performed on a partial 3x3 window
         :param split: the ratio used to split data into train/val set
+        :param seed: random seed for splitting the dataset
         """
-        super(Kitti15Preprocessor, self).__init__(dataset_path, max_disp, block_sz, match_method)
+        super(Kitti15Preprocessor, self).__init__(dataset_path, max_disp, block_sz, match_method, device, full_ZSAD)
         self.split = split
         self.train_split = os.path.join(self.dataset_path, "training", "train.txt")
         self.val_split = os.path.join(self.dataset_path, "training", "val.txt")
+        self.seed = seed
         self.l_im_path = None
         self.r_im_path = None
         self.disp_path = None
@@ -38,7 +42,7 @@ class Kitti15Preprocessor(DataPreprocessor):
         open(self.train_split, 'w').close()
         open(self.val_split, 'w').close()
 
-        random.seed(75)
+        random.seed(self.seed)
         random.shuffle(frame_list)
         frame_num = len(frame_list)
         train_num = int(frame_num * self.split)

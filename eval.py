@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
 
 import datasets
-from utils import sec_to_hms_str, compute_disp_error, compute_raw_disp_err, post_process, unpad_imgs
+from utils import sec_to_hms_str, compute_disp_error, post_process, unpad_imgs
 from crd_fusion_net import CRDFusionNet
 from eval_options import EvalOptions
 
@@ -189,7 +189,6 @@ def evaluate(opts):
     writer = SummaryWriter(os.path.join(log_path, 'eval'))
 
     current_step = 0
-    raw_disp_bad3 = 0
     final_err = {'epe': 0, 'bad3': 0, 'err_map': None}
     refined_err = {'epe': 0, 'bad3': 0, 'err_map': None}
     # for KITTI
@@ -228,11 +227,12 @@ def evaluate(opts):
             avg_refined['epe'], avg_refined['bad3'], avg_refined['err_map'] = compute_disp_error(
                 outputs['refined_disp0'], inputs['gt_disp'])
 
-            if torch.isnan(avg_final['epe']) or torch.isnan(avg_final['bad3']):
+            if torch.isnan(avg_final['epe']) or torch.isnan(avg_final['bad3']) or torch.isnan(
+                    avg_refined['epe']) or torch.isnan(avg_refined['bad3']):
+                # Mostly for SceneFlow where several Test images cause NaN error
                 handle_nan_err(avg_final)
-                num_valid_samples -= batch_num
-            if torch.isnan(avg_refined['epe']) or torch.isnan(avg_refined['bad3']):
                 handle_nan_err(avg_refined)
+                num_valid_samples -= batch_num
 
             final_err['epe'] += batch_num * avg_final['epe']
             final_err['bad3'] += batch_num * avg_final['bad3']
@@ -249,9 +249,6 @@ def evaluate(opts):
                 refined_noc_err['epe'] += batch_num * noc_refined_avg_epe
                 refined_noc_err['bad3'] += batch_num * noc_refined_avg_bad3
 
-            raw_disp_bad3 += batch_num * compute_raw_disp_err(inputs['raw_disp'], inputs['gt_disp'],
-                                                              opts.max_disp // opts.downscale)
-
             if opts.save_disp:
                 save_disp(outputs['final_disp'], inputs['frame_id'], log_path)
 
@@ -261,7 +258,6 @@ def evaluate(opts):
                 log_event(writer, inputs, outputs, avg_final, avg_refined, opts.occ_detection,
                           opts.max_disp / opts.downscale, feature_scale_list, current_step)
 
-    raw_disp_bad3 = raw_disp_bad3 / num_valid_samples
     final_epe = final_err['epe'] / num_valid_samples
     final_bad3 = final_err['bad3'] / num_valid_samples
     refined_epe = refined_err['epe'] / num_valid_samples
@@ -272,7 +268,6 @@ def evaluate(opts):
     refined_noc_bad3 = refined_noc_err['bad3'] / num_valid_samples
     frame_rate = num_valid_samples / total_time
 
-    print("Raw disparity Bad3: %.4f" % raw_disp_bad3)
     print("Refined disparity | average EPE: %.4f | average Bad3: %.4f" % (refined_epe, refined_bad3))
     print("Final disparity | average EPE: %.4f | average Bad3: %.4f" % (final_epe, final_bad3))
     print("Number of valid samples: %d" % num_valid_samples)

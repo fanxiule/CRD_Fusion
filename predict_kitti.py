@@ -11,9 +11,15 @@ from torch.utils.data import DataLoader
 from datasets import KITTI2012TestDataset, KITTI2015TestDataset
 from utils import post_process
 from crd_fusion_net import CRDFusionNet
+from data_preprocess import ConfGeneration
 
 
 def parse_args():
+    """
+    Parse options for predicting KITTI stereo
+
+    :return: options
+    """
     parser = argparse.ArgumentParser(description="CRD_Fusion KITTI Test Options")
     parser.add_argument("--data_path", type=str, help="directory where datasets are saved",
                         default=os.getenv('data_path'))
@@ -32,13 +38,25 @@ def parse_args():
     parser.add_argument("--conf_threshold", type=float, help="confidence threshold for raw disparity", default=0.8)
     parser.add_argument("--occ_threshold", type=float, help="threshold for occlusion mask", default=0.8)
     parser.add_argument("--post_processing", action="store_true", help="if set, post processing is applied")
-    parser.add_argument("--save_disp", action="store_true", help="if set, the predicted disparity maps are saved")
+    parser.add_argument("--save_pred", action="store_true", help="if set, the predictions are saved")
     return parser.parse_args()
 
 
-def save_disp(pred_disp, frame_id, log_path):
+def save_pred(pred_disp, occ, conf, thrs, frame_id, log_path):
+    """
+    Save predictions
+
+    :param pred_disp: predicted disparity map
+    :param occ: occlusion mask
+    :param conf: confidence mask
+    :param thrs: threshold for confidence mask
+    :param frame_id: frame id to name the files
+    :param log_path: save directory
+    :return: None
+    """
     if not os.path.exists(log_path):
         os.makedirs(log_path)
+    # save disp
     pred_disp = pred_disp.detach().cpu().numpy()
     pred_disp = np.squeeze(pred_disp)
     pred_disp = pred_disp * 256
@@ -49,8 +67,29 @@ def save_disp(pred_disp, frame_id, log_path):
     filename = os.path.join(log_path, frame_id)
     cv2.imwrite(filename, pred_disp)
 
+    # save occ
+    occ = occ.detach().cpu().numpy()
+    occ = np.squeeze(occ)
+    occ = (255 * occ).astype(np.uint8)
+    filename = os.path.join(log_path, "occ_%s" % frame_id)
+    cv2.imwrite(filename, occ)
+
+    # save conf
+    conf = conf.detach().cpu().numpy()
+    conf = np.squeeze(conf)
+    conf[conf < thrs] = 0
+    conf = (255 * conf).astype(np.uint8)
+    filename = os.path.join(log_path, "conf_%s" % frame_id)
+    cv2.imwrite(filename, conf)
+
 
 def predict(opts):
+    """
+    Predict KITTI stereo
+
+    :param opts: options
+    :return: None
+    """
     log_path = os.path.join(opts.log_dir, opts.model_name)
     feature_scale_list = [0, 1, 2, 3]
     model = CRDFusionNet(feature_scale_list, opts.max_disp, opts.resized_height, opts.resized_width, False, True, True)
@@ -65,14 +104,15 @@ def predict(opts):
     data_path = os.path.join(opts.data_path, opts.dataset)
     predict_dataset = dataset(data_path, opts.max_disp, opts.resized_height, opts.resized_width, opts.conf_threshold,
                               True, False)
-    predict_lodaer = DataLoader(predict_dataset, 1, False, num_workers=0, pin_memory=True, drop_last=False)
+    predict_loader = DataLoader(predict_dataset, 1, False, num_workers=0, pin_memory=True, drop_last=False)
+    conf_gen = ConfGeneration(opts.resized_height, opts.resized_width, opts.device, False)
 
     num_test_samples = len(predict_dataset)
 
     print("Begin predicting %s" % opts.model_name)
     print("Use checkpt in: %s" % opts.checkpt)
     print("Save predicted disparity maps in %s" % log_path)
-    print("Save disp: %r" % opts.save_disp)
+    print("Save predictions: %r" % opts.save_pred)
     print("Dataset: %s" % opts.dataset)
     print("Input size: %d x %d" % (opts.resized_height, opts.resized_width))
     print("Total number of test samples %d" % num_test_samples)
@@ -84,22 +124,26 @@ def predict(opts):
     duration = 0
     model.eval()
     with torch.no_grad():
-        for batch_id, inputs in enumerate(predict_lodaer):
+        for batch_id, inputs in enumerate(predict_loader):
             for k, v in inputs.items():
                 if k != "frame_id" and k != "left_pad" and k != "top_pad":
                     inputs[k] = v.to(opts.device)
             batch_start_time = time.time()
+            inputs['mask'] = conf_gen.cal_confidence(inputs['l_rgb_non_norm'], inputs['r_rgb_non_norm'],
+                                                     opts.max_disp * inputs['raw_disp'])
             outputs = model(inputs['l_rgb'], inputs['r_rgb'], inputs['raw_disp'], inputs['mask'])
             # undo padding on prediction
             outputs['refined_disp0'] = outputs['refined_disp0'][:, :, inputs['top_pad']:, inputs['left_pad']:]
             outputs['occ0'] = outputs['occ0'][:, :, inputs['top_pad']:, inputs['left_pad']:]
+            inputs['mask'] = inputs['mask'][:, :, inputs['top_pad']:, inputs['left_pad']:]
             if opts.post_processing:
                 outputs['final_disp'] = post_process(outputs['refined_disp0'], outputs['occ0'], opts.occ_threshold)
             else:
                 outputs['final_disp'] = outputs['refined_disp0']
             duration += (time.time() - batch_start_time)
-            if opts.save_disp:
-                save_disp(outputs['final_disp'], inputs['frame_id'][0], log_path)
+            if opts.save_pred:
+                save_pred(outputs['final_disp'], outputs['occ0'], inputs['mask'], opts.conf_threshold,
+                          inputs['frame_id'][0], log_path)
     print("Frame rate: %.4f" % (num_test_samples / duration))
 
 

@@ -1,4 +1,5 @@
 import os
+import torch
 from .crd_fusion_dataset import CRDFusionDataset
 
 
@@ -34,24 +35,26 @@ class KITTI2012TestDataset(CRDFusionDataset):
         Get a data sample
 
         :param index: index for the data list
-        :return: a stack of input data in tensor form including left rgb, right rgb, raw disparity, confidence mask, and frame id
+        :return: a stack of input data in tensor form including left rgb (normalized and non normalized), right rgb
+                 (normalized and non normalized), raw disparity, and frame id
         """
         frame = self.data_list[index]
         raw_inputs = {}
         l_rgb_path = os.path.join(self.data_path, "colored_0", frame)
         r_rgb_path = os.path.join(self.data_path, "colored_1", frame)
         disp_path = os.path.join(self.data_path, "raw_disp", frame)
-        conf_path = os.path.join(self.data_path, "conf", frame)
 
         raw_inputs['l_rgb'] = self._get_rgb(l_rgb_path)
         raw_inputs['r_rgb'] = self._get_rgb(r_rgb_path)
         raw_inputs['raw_disp'] = self._get_disp(disp_path)
-        raw_inputs['mask'] = self._get_conf(conf_path)
 
         _, self.orig_height, self.orig_width = raw_inputs['l_rgb'].size()
 
         inputs = self._pad_inputs(raw_inputs)
         inputs['raw_disp'] = self._normalize_disp(inputs['raw_disp'])
+        # non normalized stereo images for conf calculation
+        inputs['l_rgb_non_norm'] = torch.clone(inputs['l_rgb'])
+        inputs['r_rgb_non_norm'] = torch.clone(inputs['r_rgb'])
         if self.imgnet_norm:
             inputs['l_rgb'], inputs['r_rgb'] = self._normalize_rgb(inputs['l_rgb'], inputs['r_rgb'])
 

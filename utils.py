@@ -27,29 +27,6 @@ def sec_to_hms_str(t):
     return time_str
 
 
-def compute_raw_disp_err(raw_disp, gt_disp, max_disp_ds):
-    """
-    Compute bad3 for raw disparity
-
-    :param raw_disp: raw disparity map normalized between 0 and 1
-    :param gt_disp: groudn truth disparity map
-    :param max_disp_ds: maximum disparity range after the image is downscaled
-    :return: bad3 for raw disparity
-    """
-    valid_mask = gt_disp > 0
-    valid_pixels = torch.sum(valid_mask)
-    rescale_raw_disp = raw_disp * max_disp_ds
-    rescale_raw_disp[rescale_raw_disp == 0] = -5.0  # make sure invalid pixels are counted as outliers
-    diff = torch.abs(rescale_raw_disp - gt_disp)
-    diff = torch.mul(valid_mask, diff)
-    bad3 = diff > 3.0
-    if valid_pixels == 0:
-        bad3 = 0
-    else:
-        bad3 = torch.sum(bad3) / valid_pixels * 100.0
-    return bad3
-
-
 def compute_disp_error(pred_disp, gt_disp):
     """
     Calculate disparity error metrics for the whole batch

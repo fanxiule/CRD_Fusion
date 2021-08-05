@@ -7,7 +7,7 @@ class SceneFlowPreprocessor(DataPreprocessor):
     Preprocessor for the Scene Flow dataset
     """
 
-    def __init__(self, dataset_path, max_disp, block_sz, match_method):
+    def __init__(self, dataset_path, max_disp, block_sz, match_method, device, full_ZSAD):
         """
         Preprocessor for the Scene Flow dataset
 
@@ -15,8 +15,10 @@ class SceneFlowPreprocessor(DataPreprocessor):
         :param max_disp: maximum disparity to check when matching
         :param block_sz: block size for the stereo algorithm
         :param match_method: choose between local_BM and SG_BM for local or semi-global block matching
+        :param device: device to compute confidence measures, choose between cuda and cpu
+        :param full_ZSAD: if set to True, ZSAD is performed on a 3x3 window. Otherwise, it is performed on a partial 3x3 window
         """
-        super(SceneFlowPreprocessor, self).__init__(dataset_path, max_disp, block_sz, match_method)
+        super(SceneFlowPreprocessor, self).__init__(dataset_path, max_disp, block_sz, match_method, device, full_ZSAD)
         self.l_im_path = None
         self.r_im_path = None
         self.disp_path = None

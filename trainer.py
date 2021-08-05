@@ -57,7 +57,7 @@ class CRDFusionTrainer:
             self.loss = SupLoss(self.feature_scale_list)
         else:
             self.loss = SelfSupLoss(self.opt.supervision_weight, self.opt.photo_weight, self.opt.smooth_weight,
-                                    self.opt.left_weight, self.opt.occ_weight, self.opt.max_disp / self.opt.downscale,
+                                    self.opt.occ_weight, self.opt.max_disp / self.opt.downscale,
                                     self.feature_scale_list, self.opt.resized_height, self.opt.resized_width,
                                     self.opt.occ_detection, self.opt.occ_epoch, self.opt.loss_fusion)
         self.loss.to(self.opt.device)
@@ -131,10 +131,9 @@ class CRDFusionTrainer:
         print("Occlusion threshold used in post processing: %.2f" % self.opt.occ_threshold)
         print("Post processing: %r" % self.opt.post_processing)
         print("Supervised training: %r" % self.opt.supervised)
-        print("Loss function weighting (if applicable): %.2f, %.2f, %.2f, %.2f, %.2f" % (
-            self.opt.supervision_weight, self.opt.photo_weight, self.opt.smooth_weight, self.opt.left_weight,
-            self.opt.occ_weight))
-        print("Apply occlusion mask in supervision/left loss from epoch: %d" % self.opt.occ_epoch)
+        print("Loss function weighting (if applicable): %.2f, %.2f, %.2f, %.2f" % (
+            self.opt.supervision_weight, self.opt.photo_weight, self.opt.smooth_weight, self.opt.occ_weight))
+        print("Apply occlusion mask in supervision/smoothness loss after epoch: %d" % self.opt.occ_epoch)
         # Note that when occ_detection is False or loss_fusion is False, their corresponding weights would become 0 in
         # the loss function, even if they are shown as non-zero here
 

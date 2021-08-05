@@ -29,11 +29,23 @@ def parse_arguments():
                         help="Choose stereo matching methods to generate the disparity maps",
                         choices=["localBM", "SGBM"],
                         default="SGBM")
+    parser.add_argument("--device",
+                        type=str,
+                        help="Preprocessing device",
+                        choices=["cpu", "cuda"],
+                        default="cuda")
+    parser.add_argument("--full_ZSAD",
+                        action="store_true",
+                        help="if set, ZSAD is calculated for a full 3x3 window. Otherwise, it's calculated for a partial window")
     parser.add_argument("--train_val_split_per",
                         type=float,
                         help="The ratio used to split data into train/val set. Set it to None if not needed. If set to "
                              "0.8, 80% of data is used for training and the rest for validation",
                         default=0.8)
+    parser.add_argument("--random_seed",
+                        type=int,
+                        help="Random seed for splitting the dataset into train/val set. Used in KITTI",
+                        default=75)
     opt = parser.parse_args()
     return opt
 
@@ -49,10 +61,11 @@ def main(opt):
         raise RuntimeError
     if opt.dataset_name == "kitti2015" or opt.dataset_name == "kitti2012":
         assert opt.train_val_split_per is not None, "Need to specify the train and val split for this dataset"
-        preprocessor = preprocessor(dataset_path, opt.max_disp, opt.block_size, opt.match_method,
-                                    opt.train_val_split_per)
+        preprocessor = preprocessor(dataset_path, opt.max_disp, opt.block_size, opt.match_method, opt.device,
+                                    opt.full_ZSAD, opt.train_val_split_per, opt.random_seed)
     else:
-        preprocessor = preprocessor(dataset_path, opt.max_disp, opt.block_size, opt.match_method)
+        preprocessor = preprocessor(dataset_path, opt.max_disp, opt.block_size, opt.match_method, opt.device,
+                                    opt.full_ZSAD)
     print("Start preprocessing %s dataset" % opt.dataset_name)
     preprocessor.preprocess()
 

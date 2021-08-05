@@ -4,6 +4,14 @@ import torch.nn.functional as f
 
 class ConfGeneration:
     def __init__(self, img_height, img_width, device, full_ZSAD):
+        """
+        A class to generate confidence map
+
+        :param img_height: image height, set to None for variable image size
+        :param img_width: image width, set to None for variable image size
+        :param device: device to compute confidence measures, choose between cuda and cpu
+        :param full_ZSAD: if set to True, ZSAD is performed on a 3x3 window. Otherwise, it is performed on a partial 3x3 window
+        """
         self.img_height = img_height
         self.img_width = img_width
         self.device = device
@@ -50,6 +58,11 @@ class ConfGeneration:
             self.group = 5
 
     def _gen_grid(self):
+        """
+        Generate grid for image warping
+
+        :return: None
+        """
         grid_y = torch.linspace(0, self.img_height - 1, self.img_height)
         grid_x = torch.linspace(0, self.img_width - 1, self.img_width)
         self.grid_ver, self.grid_hor = torch.meshgrid(grid_y, grid_x)
@@ -63,12 +76,25 @@ class ConfGeneration:
 
     @staticmethod
     def _gen_mask(disp):
+        """
+        Generate a validity mask
+
+        :param disp: raw disparity map
+        :return: validity mask
+        """
         mask = torch.clone(disp)
         mask[mask >= 0.001] = 1
         mask[mask < 0.001] = 0
         return mask
 
     def _warp_img(self, src, disp):
+        """
+        Bilinearly warp an image
+
+        :param src: source image
+        :param disp: raw disaprity
+        :return: synthetic image
+        """
         grid_row = self.grid_ver.repeat(1, 1, 1)
         grid_col = self.grid_hor.repeat(1, 1, 1)
         grid_col = grid_col - torch.squeeze(disp, dim=1)
@@ -80,32 +106,59 @@ class ConfGeneration:
         return synth
 
     def _cal_ZSAD(self, l_im, synth_l_im):
+        """
+        Calculate ZSAD
+
+        :param l_im: left image
+        :param synth_l_im: synthetic left image
+        :return: ZSAD map
+        """
         l_img = torch.unsqueeze(l_im, dim=1).repeat(1, self.group, 1, 1)
-        synth_l_img = torch.unsqueeze(synth_l_im, dim=1).repeat(self.group, 1, 1)
+        synth_l_img = torch.unsqueeze(synth_l_im, dim=1).repeat(1, self.group, 1, 1)
         l_img = f.conv2d(l_img, self.element_selector, stride=1, padding=1, groups=self.group)
         synth_l_img = f.conv2d(synth_l_img, self.element_selector, stride=1, padding=1, groups=self.group)
         l_img_mean = torch.mean(l_img, dim=1, keepdim=True)
         synth_l_img_mean = torch.mean(synth_l_img, dim=1, keepdim=True)
         ZSAD = torch.abs(l_img - l_img_mean - synth_l_img + synth_l_img_mean)
-        ZSAD = torch.linalg.norm(ZSAD, ord=1, dim=1)
+        ZSAD = torch.mean(ZSAD, dim=1, keepdim=True)
+        ZSAD = torch.linalg.norm(ZSAD, ord=2, dim=0, keepdim=True)
         ZSAD /= torch.mean(ZSAD)
         return ZSAD
 
     def _cal_MND(self, disp):
-        mean_disp = f.avg_pool2d(disp, self.MND_window, stride=1, padding=1)
+        """
+        Calculate MND
+
+        :param disp: raw disparity
+        :return: MND map
+        """
+        mean_disp = f.avg_pool2d(disp, self.MND_window, stride=1, padding=self.MND_window // 2)
         MND = -torch.abs(disp - mean_disp)
-        MND = torch.squeeze(MND)
         return MND
 
     def _cal_img_grad(self, img):
-        img_x_grad = f.conv2d(255 * img, self.img_sobel_x, stride=1, padding=1, groups=1)  # undo scaling from ToTensor
-        img_y_grad = f.conv2d(255 * img, self.img_sobel_y, stride=1, padding=1, groups=1)
+        """
+        Calculate image gradient by using sobel filters
+
+        :param img: RGB image normalized between 0 and 1
+        :return: image gradient
+        """
+        img_x_grad = f.conv2d(255 * img, self.img_sobel_x, stride=1, padding=1, groups=3)  # undo scaling from ToTensor
+        img_y_grad = f.conv2d(255 * img, self.img_sobel_y, stride=1, padding=1, groups=3)
         grad = torch.sqrt(img_x_grad ** 2 + img_y_grad ** 2)
-        grad = torch.linalg.norm(grad, ord=22, axis=1)
-        grad = torch.squeeze(grad)
+        grad = torch.linalg.norm(grad, ord=2, axis=1, keepdim=True)
         return grad
 
     def cal_confidence(self, l_im, r_im, disp, mask=None):
+        """
+        Calculate confidence map for images with fixed size
+
+        :param l_im: left image
+        :param r_im: right image
+        :param disp: raw disparity
+        :param mask: validity mask. Default to None
+        :return: confidence map
+        """
         assert l_im.size()[0] == 1, "this module can only handle batch size = 1"
         if mask is None:
             mask = self._gen_mask(disp)
@@ -118,11 +171,21 @@ class ConfGeneration:
         smooth_weight = torch.exp(-self.smooth_scaling * l_im_gard)
         edge_weight = 1 - smooth_weight
         confidence = smooth_weight * MND_conf + edge_weight * ZSAD_conf
-        confidence *= torch.squeeze(mask)
+        confidence *= mask
         return confidence
 
-    def cal_confidence_hw(self, l_im, r_im, disp, img_h, img_w, mask=None):
-        assert l_im.size()[0] == 1, "this module can only handle batch size = 1"
+    def cal_confidence_hw(self, l_im, r_im, disp, mask=None):
+        """
+        Calculate confidence map for images with variable size
+
+        :param l_im: left image
+        :param r_im: right image
+        :param disp: raw disparity
+        :param mask: validity mask. Default to None
+        :return: confidence map
+        """
+        batch, _, img_h, img_w = l_im.size()
+        assert batch == 1, "this module can only handle batch size = 1"
         self.img_height = img_h
         self.img_width = img_w
         self._gen_grid()
@@ -137,5 +200,5 @@ class ConfGeneration:
         smooth_weight = torch.exp(-self.smooth_scaling * l_im_gard)
         edge_weight = 1 - smooth_weight
         confidence = smooth_weight * MND_conf + edge_weight * ZSAD_conf
-        confidence *= torch.squeeze(mask)
+        confidence *= mask
         return confidence

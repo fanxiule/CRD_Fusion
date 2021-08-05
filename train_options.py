@@ -125,17 +125,13 @@ class TrainOptions:
                                  type=float,
                                  help="weight for the smoothness loss in training loss calculation",
                                  default=0.45)  # 0.2 may work better for KITTI
-        self.parser.add_argument("--left_weight",
-                                 type=float,
-                                 help="weight for the left smoothness loss in trainin gloss calculation",
-                                 default=0.25)
         self.parser.add_argument("--occ_weight",
                                  type=float,
                                  help="weight for the cross entropy loss of the occlusion masks",
                                  default=0.2)  # may need higher > 0.5 for KITTI, 0.7 is too much
         self.parser.add_argument("--occ_epoch",
                                  type=int,
-                                 help="after the specified epoch number, occlusion is applied to supervision and left "
+                                 help="after the specified epoch number, occlusion is applied to supervision and smoothness "
                                       "losses. Set it to negative to disable this action",
                                  default=-1)
 
