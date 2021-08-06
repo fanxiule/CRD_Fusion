@@ -51,9 +51,9 @@ class EvalOptions:
                                  help="name of the folder where the tensorboard event and/or predicted disparity maps "
                                       "will be saved",
                                  default="crd_fusion_eval")
-        self.parser.add_argument("--save_disp",
-                                 action="store_true",
-                                 help="if set, the predicted disparity maps are saved in .npy format")
+        self.parser.add_argument("--save_pred",
+                                 action="store_false",
+                                 help="if set, the predicted disparity maps and occlusion masks are saved in .npy format")
         self.parser.add_argument("--device",
                                  type=str,
                                  help="evaluation device",

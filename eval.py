@@ -15,11 +15,12 @@ options = EvalOptions()
 eval_opts = options.parse()
 
 
-def save_disp(pred_disp, frame_id, log_path):
+def save_pred(pred_disp, pred_occ, frame_id, log_path):
     """
-    Save predicted disparity in .npy format
+    Save prediction in .npy format
 
     :param pred_disp: predicted disparity
+    :param pred_occ: occlusion map
     :param frame_id: id or filename for the disparity map
     :param log_path: path to save the prediction
     :return: None
@@ -38,8 +39,11 @@ def save_disp(pred_disp, frame_id, log_path):
             f_id = frame_id[i]
             save_path = pred_path
         disp = torch.squeeze(pred_disp[i]).detach().cpu().numpy()
+        occ = torch.squeeze(pred_occ[i]).detach().cpu().numpy()
         disp_path = os.path.join(save_path, f_id) + ".npy"
+        occ_path = os.path.join(save_path, "occ_%s" % f_id) + ".npy"
         np.save(disp_path, disp)
+        np.save(occ_path, occ)
 
 
 def log_time(epe, bad3, duration, batch_sz, start_time, current_step, total_steps):
@@ -167,7 +171,7 @@ def evaluate(opts):
     print("Use checkpt in: %s" % opts.checkpt)
     print("Log event and/or predicted disparity maps in %s" % log_path)
     print("Log frequency: %d" % opts.log_frequency)
-    print("Save disp: %r" % opts.save_disp)
+    print("Save disp: %r" % opts.save_pred)
     print("-------------Input Data Info-------------")
     print("Dataset: %s" % opts.dataset)
     print("Input size: %d x %d" % (opts.resized_height, opts.resized_width))
@@ -249,8 +253,8 @@ def evaluate(opts):
                 refined_noc_err['epe'] += batch_num * noc_refined_avg_epe
                 refined_noc_err['bad3'] += batch_num * noc_refined_avg_bad3
 
-            if opts.save_disp:
-                save_disp(outputs['final_disp'], inputs['frame_id'], log_path)
+            if opts.save_pred:
+                save_pred(outputs['final_disp'], outputs['occ0'], inputs['frame_id'], log_path)
 
             if current_step % opts.log_frequency == 0:
                 log_time(avg_final['epe'], avg_final['bad3'], duration, batch_num, start_time, current_step,
