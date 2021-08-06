@@ -52,7 +52,7 @@ class EvalOptions:
                                       "will be saved",
                                  default="crd_fusion_eval")
         self.parser.add_argument("--save_pred",
-                                 action="store_false",
+                                 action="store_true",
                                  help="if set, the predicted disparity maps and occlusion masks are saved in .npy format")
         self.parser.add_argument("--device",
                                  type=str,
