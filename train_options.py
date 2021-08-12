@@ -27,7 +27,7 @@ class TrainOptions:
                                  type=str,
                                  help="dataset to train on",
                                  default="SceneFlow",
-                                 choices=["kitti2015", "kitti2012", "SceneFlow"])
+                                 choices=["kitti2015", "kitti2012", "kitti2015_full", "kitti2012_full", "SceneFlow"])
         self.parser.add_argument("--resized_height",
                                  type=int,
                                  help="image height after resizing",
@@ -155,7 +155,7 @@ class TrainOptions:
         self.parser.add_argument("--early_log_frequency",
                                  type=int,
                                  help="tensorboard logging frequency in number of batches in the early phase",
-                                 default=10)  # TODO 100
+                                 default=10)
         self.parser.add_argument("--late_log_frequency",
                                  type=int,
                                  help="tensorboard logging frequency in number of batches in the late phase",
@@ -163,11 +163,11 @@ class TrainOptions:
         self.parser.add_argument("--early_late_split",
                                  type=int,
                                  help="logging is split into early and late phase at this batch id",
-                                 default=1000)  # TODO 2000
+                                 default=1000)
         self.parser.add_argument("--save_frequency",
                                  type=int,
                                  help="frequency in number of epochs to save a trained model",
-                                 default=100)  # TODO 2
+                                 default=100)
 
     def parse(self):
         self.options = self.parser.parse_args()

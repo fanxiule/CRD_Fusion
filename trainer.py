@@ -76,6 +76,8 @@ class CRDFusionTrainer:
         # dataset
         dataset_list = {'kitti2015': datasets.Kitti2015Dataset,
                         'kitti2012': datasets.Kitti2012Dataset,
+                        'kitti2015_full': datasets.Kitti2015FullDataset,
+                        'kitti2012_full': datasets.Kitti2012FullDataset,
                         'SceneFlow': datasets.SceneFlowDataset}
         self.dataset = dataset_list[self.opt.dataset]
         data_path = os.path.join(self.opt.data_path, self.opt.dataset)

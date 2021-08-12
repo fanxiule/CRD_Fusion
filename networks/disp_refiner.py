@@ -125,7 +125,6 @@ class RefinerVolProcessor(nn.Module):
         :param input_ch: channel number of the inputs
         """
         super(RefinerVolProcessor, self).__init__()
-        # TODO consider confidence mask too?
         self.conv1 = ConvBlock2D(in_ch=input_ch, out_ch=32, kernel=3, stride=1, pad=1, dilation=1,
                                  activation='leaky_relu', bn=True)
         self.conv2 = ConvBlock2D(in_ch=(input_ch + 32), out_ch=32, kernel=3, stride=1, pad=2, dilation=2,

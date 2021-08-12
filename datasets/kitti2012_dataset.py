@@ -77,7 +77,6 @@ class Kitti2012Dataset(CRDFusionDataset):
         assert self.orig_width % self.downscale == 0 and self.orig_height % self.downscale == 0, \
             "original image size not divisible by downscaling factor"
 
-        # TODO only allow gt_disp in val split not in train split
         # if not self.is_train:
         gt_occ_disp_path = os.path.join(self.data_path, "disp_occ", frame)
         gt_noc_disp_path = os.path.join(self.data_path, "disp_noc", frame)
