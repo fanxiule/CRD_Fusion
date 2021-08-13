@@ -247,7 +247,7 @@ class SelfSupLoss(nn.Module):
         img_grad_y = self._cal_img_smoothness(l_rgb, self.img_sobel_y)
         occlusion_mask = torch.ones_like(pred['refined_disp0'])
         if not self.fusion:
-            conf_mask = torch.ones_like(conf)
+            conf_mask = torch.zeros_like(conf)
         else:
             conf_mask = conf
 
