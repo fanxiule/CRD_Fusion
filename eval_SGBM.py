@@ -53,26 +53,21 @@ def cal_error(sgbm, gt, noc_gt=None):
     error = {'validity': True}
     gt_valid = gt > 0
     gt_valid_pixel = torch.sum(gt_valid)
-    if noc_gt is not None:
-        noc_gt_valid = noc_gt > 0
-        noc_gt_valid_pixel = torch.sum(noc_gt_valid)
-    else:
-        noc_gt_valid_pixel = None
-    if gt_valid_pixel == 0 or (noc_gt_valid_pixel is not None and noc_gt_valid_pixel == 0):
+    sgbm_valid = sgbm > 0
+    sgbm_valid_pixels = torch.sum(sgbm_valid)
+    strict_gt_valid = torch.logical_and(gt_valid, sgbm_valid)
+    strict_gt_valid_pixel = torch.sum(strict_gt_valid)
+    if gt_valid_pixel == 0 or strict_gt_valid_pixel == 0:  # handle situation with no valid pixels
         error['validity'] = False
         return error
 
-    sgbm_valid = sgbm > 0
-    sgbm_valid_pixels = torch.sum(sgbm_valid)
     total_pixels = torch.numel(sgbm)
     error['coverage'] = sgbm_valid_pixels / total_pixels * 100.0
 
     gt_diff = torch.abs(sgbm - gt)
     # For EPE, it only makes sense to consider pixels that are valid in both SGBM and GT
-    # For Bad3, a strict case (pixels valid in both SGBM and GT) and a relaxed case (pixels valid only in GT).
+    # For Bad3, we have a strict case (pixels valid in both SGBM and GT) and a relaxed case (pixels valid only in GT).
     # The second case is more accurate since the SGBM algorithm also attempts to solve those invalid pixels
-    strict_gt_valid = torch.logical_and(gt_valid, sgbm_valid)
-    strict_gt_valid_pixel = torch.sum(strict_gt_valid)
     strict_gt_diff = torch.mul(gt_diff, strict_gt_valid)
     relaxed_gt_diff = torch.mul(gt_diff, gt_valid)
     error['gt_epe'] = torch.sum(strict_gt_diff) / strict_gt_valid_pixel
@@ -82,9 +77,14 @@ def cal_error(sgbm, gt, noc_gt=None):
     error['relaxed_gt_bad3'] = torch.sum(relaxed_gt_bad3) / gt_valid_pixel * 100.0
 
     if noc_gt is not None:
-        noc_gt_diff = torch.abs(sgbm - noc_gt)
+        noc_gt_valid = noc_gt > 0
+        noc_gt_valid_pixel = torch.sum(noc_gt_valid)
         strict_noc_gt_valid = torch.logical_and(noc_gt_valid, sgbm_valid)
         strict_noc_gt_valid_pixel = torch.sum(strict_noc_gt_valid)
+        if noc_gt_valid_pixel == 0 or strict_noc_gt_valid_pixel == 0:
+            error['validity'] = False
+            return error
+        noc_gt_diff = torch.abs(sgbm - noc_gt)
         strict_noc_gt_diff = torch.mul(noc_gt_diff, strict_noc_gt_valid)
         relaxed_noc_gt_diff = torch.mul(noc_gt_diff, noc_gt_valid)
         error['noc_gt_epe'] = torch.sum(strict_noc_gt_diff) / strict_noc_gt_valid_pixel
@@ -140,7 +140,7 @@ def eval_sgbm(opts):
             if noc_gt_disp is not None:
                 noc_gt_disp = noc_gt_disp[:, :, inputs['top_pad']:, inputs['left_pad']:]
 
-        # disable error computation for leftmost columns since the algorithms does not attempt to solve them
+        # disable error computation for leftmost columns since the algorithm does not attempt to solve them
         sgbm_disp = sgbm_disp[:, :, :, opts.max_disp:]
         gt_disp = gt_disp[:, :, :, opts.max_disp:]
         if noc_gt_disp is not None:
@@ -169,6 +169,7 @@ def eval_sgbm(opts):
     relaxed_noc_gt_bad3 /= num_valid_samples
 
     print("Average converage: %.4f" % coverage)
+    print("Valid frames: %d | Total frames: %d " % (num_valid_samples, num_samples))
     print("For all pixels: ")
     print("EPE = %.4f | Strict Bad3 = %.4f | Relaxed Bad3 = %.4f" % (gt_epe, strict_gt_bad3, relaxed_gt_bad3))
     print("For noc pixels (KITTI only): ")
