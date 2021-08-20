@@ -270,7 +270,7 @@ def evaluate(opts):
     final_noc_bad3 = final_noc_err['bad3'] / num_valid_samples
     refined_noc_epe = refined_noc_err['epe'] / num_valid_samples
     refined_noc_bad3 = refined_noc_err['bad3'] / num_valid_samples
-    frame_rate = num_valid_samples / total_time
+    frame_rate = num_eval_samples / total_time
 
     print("Refined disparity | average EPE: %.4f | average Bad3: %.4f" % (refined_epe, refined_bad3))
     print("Final disparity | average EPE: %.4f | average Bad3: %.4f" % (final_epe, final_bad3))
