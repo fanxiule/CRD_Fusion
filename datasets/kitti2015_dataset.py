@@ -1,6 +1,7 @@
 import os
 import random
 import cv2
+import torch
 from .crd_fusion_dataset import CRDFusionDataset
 
 
@@ -102,6 +103,10 @@ class Kitti2015Dataset(CRDFusionDataset):
         if do_color_aug:
             inputs['l_rgb'], inputs['r_rgb'] = self._data_augmentation(inputs['l_rgb'], inputs['r_rgb'])
 
+        # non normalized stereo images for conf calculation
+        inputs['l_rgb_non_norm'] = torch.clone(inputs['l_rgb'])
+        inputs['r_rgb_non_norm'] = torch.clone(inputs['r_rgb'])
+            
         if self.imgnet_norm:
             inputs['l_rgb'], inputs['r_rgb'] = self._normalize_rgb(inputs['l_rgb'], inputs['r_rgb'])
 

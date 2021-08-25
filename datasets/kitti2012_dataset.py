@@ -1,6 +1,7 @@
 import os
 import random
 import cv2
+import torch
 from .crd_fusion_dataset import CRDFusionDataset
 
 
@@ -98,6 +99,10 @@ class Kitti2012Dataset(CRDFusionDataset):
             raise RuntimeError
 
         inputs['raw_disp'] = self._normalize_disp(inputs['raw_disp'])
+
+        # non normalized stereo images for conf calculation
+        inputs['l_rgb_non_norm'] = torch.clone(inputs['l_rgb'])
+        inputs['r_rgb_non_norm'] = torch.clone(inputs['r_rgb'])
 
         if do_color_aug:
             inputs['l_rgb'], inputs['r_rgb'] = self._data_augmentation(inputs['l_rgb'], inputs['r_rgb'])

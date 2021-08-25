@@ -8,7 +8,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from datasets import KITTI2012TestDataset, KITTI2015TestDataset
+from datasets import KITTI2012TestDataset, KITTI2015TestDataset, Kitti2015Dataset, Kitti2012Dataset
 from utils import post_process
 from crd_fusion_net import CRDFusionNet
 from data_preprocess import ConfGeneration
@@ -25,13 +25,13 @@ def parse_args():
                         default=os.getenv('data_path'))
     # default="/home/xfan/Documents/Datasets/")
     parser.add_argument("--checkpt", type=str, help="directory to pretrained checkpoint files",
-                        default="/home/xfan/Documents/Avidbots/Experiments/CRD_Fusion/models/crd_fusion/checkpts/weights_100")
+                        default="/home/xfan/Documents/Avidbots/Experiments/CRD_Fusion/models/pretrained/weights_800")
     parser.add_argument("--log_dir", type=str, help="directory to save prediction", default="models")
     parser.add_argument("--model_name", type=str, help="name of folder to save prediction",
                         default="crd_fusion_test")
     parser.add_argument("--device", type=str, help="test device", choices=["cpu", "cuda"], default="cuda")
-    parser.add_argument("--dataset", type=str, help="select a KITTI test set", default="kitti2015",
-                        choices=["kitti2015", "kitti2012"])
+    parser.add_argument("--dataset", type=str, help="select a KITTI test set", default="kitti2015_val",
+                        choices=["kitti2015_test", "kitti2012_test", "kitti2015_val", "kitti2012_val"])
     parser.add_argument("--max_disp", type=int, help="max disparity range according to the checkpt file", default=128)
     parser.add_argument("--resized_height", type=int, help="image height after resizing", default=376)
     parser.add_argument("--resized_width", type=int, help="image width after resizing", default=1248)
@@ -99,11 +99,21 @@ def predict(opts):
         model.init_model()
     model.to(opts.device)
 
-    dataset_list = {'kitti2015': KITTI2015TestDataset, 'kitti2012': KITTI2012TestDataset}
+    dataset_list = {
+        'kitti2015_test': KITTI2015TestDataset,
+        'kitti2012_test': KITTI2012TestDataset,
+        'kitti2015_val': Kitti2015Dataset,
+        'kitti2012_val': Kitti2012Dataset,
+    }
     dataset = dataset_list[opts.dataset]
-    data_path = os.path.join(opts.data_path, opts.dataset)
-    predict_dataset = dataset(data_path, opts.max_disp, opts.resized_height, opts.resized_width, opts.conf_threshold,
-                              True, False)
+    if "test" in opts.dataset:
+        data_path = os.path.join(opts.data_path, opts.dataset.replace("_test", ""))
+        predict_dataset = dataset(data_path, opts.max_disp, opts.resized_height, opts.resized_width,
+                                  opts.conf_threshold, True, False)
+    else:
+        data_path = os.path.join(opts.data_path, opts.dataset.replace("_val", ""))
+        predict_dataset = dataset(data_path, opts.max_disp, 1, opts.resized_height, opts.resized_width,
+                                  opts.conf_threshold, False, True, False)
     predict_loader = DataLoader(predict_dataset, 1, False, num_workers=0, pin_memory=True, drop_last=False)
     conf_gen = ConfGeneration(opts.resized_height, opts.resized_width, opts.device, False)
 
