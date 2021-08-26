@@ -42,7 +42,7 @@ class KITTI2015TestDataset(CRDFusionDataset):
         raw_inputs = {}
         l_rgb_path = os.path.join(self.data_path, "image_2", frame)
         r_rgb_path = os.path.join(self.data_path, "image_3", frame)
-        disp_path = os.path.join(self.data_path, "raw_disp", frame)
+        disp_path = os.path.join(self.data_path, "raw_disp", frame.replace(".png", ".npy"))
 
         raw_inputs['l_rgb'] = self._get_rgb(l_rgb_path)
         raw_inputs['r_rgb'] = self._get_rgb(r_rgb_path)
@@ -51,10 +51,13 @@ class KITTI2015TestDataset(CRDFusionDataset):
         _, self.orig_height, self.orig_width = raw_inputs['l_rgb'].size()
 
         inputs = self._pad_inputs(raw_inputs)
-        inputs['raw_disp'] = self._normalize_disp(inputs['raw_disp'])
+
+        inputs['raw_disp_non_norm'] = torch.clone(inputs['raw_disp'])  # for conf generation in predict_kitti.py
+        inputs['raw_disp'] = self._normalize_disp(inputs['raw_disp'])  # for input to the network
         # non normalized stereo images for conf calculation
         inputs['l_rgb_non_norm'] = torch.clone(inputs['l_rgb'])
         inputs['r_rgb_non_norm'] = torch.clone(inputs['r_rgb'])
+
         if self.imgnet_norm:
             inputs['l_rgb'], inputs['r_rgb'] = self._normalize_rgb(inputs['l_rgb'], inputs['r_rgb'])
 

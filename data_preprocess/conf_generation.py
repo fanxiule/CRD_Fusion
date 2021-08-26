@@ -3,17 +3,15 @@ import torch.nn.functional as f
 
 
 class ConfGeneration:
-    def __init__(self, img_height, img_width, device, full_ZSAD):
+    def __init__(self, device, full_ZSAD):
         """
         A class to generate confidence map
 
-        :param img_height: image height, set to None for variable image size
-        :param img_width: image width, set to None for variable image size
         :param device: device to compute confidence measures, choose between cuda and cpu
         :param full_ZSAD: if set to True, ZSAD is performed on a 3x3 window. Otherwise, it is performed on a partial 3x3 window
         """
-        self.img_height = img_height
-        self.img_width = img_width
+        self.img_height = None
+        self.img_width = None
         self.device = device
 
         # for img gradient
@@ -151,32 +149,7 @@ class ConfGeneration:
 
     def cal_confidence(self, l_im, r_im, disp, mask=None):
         """
-        Calculate confidence map for images with fixed size
-
-        :param l_im: left image
-        :param r_im: right image
-        :param disp: raw disparity
-        :param mask: validity mask. Default to None
-        :return: confidence map
-        """
-        assert l_im.size()[0] == 1, "this module can only handle batch size = 1"
-        if mask is None:
-            mask = self._gen_mask(disp)
-        synth_l_im = self._warp_img(r_im, disp)
-        ZSAD = self._cal_ZSAD(l_im[0], synth_l_im[0])
-        ZSAD_conf = torch.exp(-self.ZSAD_conf_scaling * ZSAD)
-        MND = self._cal_MND(disp)
-        MND_conf = torch.exp(self.MND_conf_scaling * MND)
-        l_im_gard = self._cal_img_grad(l_im)
-        smooth_weight = torch.exp(-self.smooth_scaling * l_im_gard)
-        edge_weight = 1 - smooth_weight
-        confidence = smooth_weight * MND_conf + edge_weight * ZSAD_conf
-        confidence *= mask
-        return confidence
-
-    def cal_confidence_hw(self, l_im, r_im, disp, mask=None):
-        """
-        Calculate confidence map for images with variable size
+        Calculate confidence map for images
 
         :param l_im: left image
         :param r_im: right image
@@ -196,8 +169,8 @@ class ConfGeneration:
         ZSAD_conf = torch.exp(-self.ZSAD_conf_scaling * ZSAD)
         MND = self._cal_MND(disp)
         MND_conf = torch.exp(self.MND_conf_scaling * MND)
-        l_im_gard = self._cal_img_grad(l_im)
-        smooth_weight = torch.exp(-self.smooth_scaling * l_im_gard)
+        l_im_grad = self._cal_img_grad(l_im)
+        smooth_weight = torch.exp(-self.smooth_scaling * l_im_grad)
         edge_weight = 1 - smooth_weight
         confidence = smooth_weight * MND_conf + edge_weight * ZSAD_conf
         confidence *= mask

@@ -65,8 +65,8 @@ class Kitti2012Dataset(CRDFusionDataset):
         raw_inputs = {}
         l_rgb_path = os.path.join(self.data_path, "colored_0", frame)
         r_rgb_path = os.path.join(self.data_path, "colored_1", frame)
-        disp_path = os.path.join(self.data_path, "raw_disp", frame)
-        conf_path = os.path.join(self.data_path, "conf", frame)
+        disp_path = os.path.join(self.data_path, "raw_disp", frame.replace(".png", ".npy"))
+        conf_path = os.path.join(self.data_path, "conf", frame.replace(".png", ".npy"))
 
         raw_inputs['l_rgb'] = self._get_rgb(l_rgb_path)
         raw_inputs['r_rgb'] = self._get_rgb(r_rgb_path)
@@ -98,19 +98,19 @@ class Kitti2012Dataset(CRDFusionDataset):
             print("Inconsistent image resizing scheme")
             raise RuntimeError
 
+        if not self.is_train:  # for conf generation in predict_kitti.py
+            inputs['raw_disp_non_norm'] = torch.clone(inputs['raw_disp'])
+            inputs['l_rgb_non_norm'] = torch.clone(inputs['l_rgb'])
+            inputs['r_rgb_non_norm'] = torch.clone(inputs['r_rgb'])
+
         inputs['raw_disp'] = self._normalize_disp(inputs['raw_disp'])
-
-        # non normalized stereo images for conf calculation
-        inputs['l_rgb_non_norm'] = torch.clone(inputs['l_rgb'])
-        inputs['r_rgb_non_norm'] = torch.clone(inputs['r_rgb'])
-
         if do_color_aug:
             inputs['l_rgb'], inputs['r_rgb'] = self._data_augmentation(inputs['l_rgb'], inputs['r_rgb'])
 
         if self.imgnet_norm:
             inputs['l_rgb'], inputs['r_rgb'] = self._normalize_rgb(inputs['l_rgb'], inputs['r_rgb'])
 
-        # for saving predicted disaprity
+        # for saving predicted disparity
         inputs['frame_id'] = frame
 
         return inputs

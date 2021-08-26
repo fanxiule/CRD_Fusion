@@ -94,6 +94,6 @@ class Kitti15Preprocessor(DataPreprocessor):
                     "Processing frame %d/%d in scene %d/%d" % (frame_count, len(frames), scene_count, len(scene_list)))
                 l_im_frame = os.path.join(self.l_im_path, f)
                 r_im_frame = os.path.join(self.r_im_path, f)
-                disp_frame = os.path.join(self.disp_path, f)
-                conf_frame = os.path.join(self.conf_path, f)
+                disp_frame = os.path.join(self.disp_path, f.replace(".png", ".npy"))
+                conf_frame = os.path.join(self.conf_path, f.replace(".png", ".npy"))
                 self._process_frame(l_im_frame, r_im_frame, disp_frame, conf_frame)

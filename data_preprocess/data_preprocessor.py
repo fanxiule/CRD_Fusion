@@ -2,6 +2,7 @@ import cv2
 import torch
 import numpy as np
 from torchvision import transforms
+from PIL import Image
 from .conf_generation import ConfGeneration
 
 
@@ -26,7 +27,7 @@ class DataPreprocessor:
         self.match_method = match_method
         self.to_tensor = transforms.ToTensor()
         self.device = device
-        self.conf_gen = ConfGeneration(None, None, self.device, full_ZSAD)
+        self.conf_gen = ConfGeneration(self.device, full_ZSAD)
 
         if self.match_method == "localBM":
             self.stereo = cv2.StereoBM_create(numDisparities=self.max_disp, blockSize=block_sz)
@@ -56,8 +57,8 @@ class DataPreprocessor:
         :return: disparity map & a binary validity mask to indicate if a pixel has been matched or not
         """
         if self.match_method == "localBM":  # local_BM and needs grayscale images
-            l_im = cv2.cvtColor(l_im, cv2.COLOR_BGR2GRAY)
-            r_im = cv2.cvtColor(r_im, cv2.COLOR_BGR2GRAY)
+            l_im = cv2.cvtColor(l_im, cv2.COLOR_RGB2GRAY)  # PIL opens image in RGB
+            r_im = cv2.cvtColor(r_im, cv2.COLOR_RGB2GRAY)
         disp = self.stereo.compute(l_im, r_im)
         disp = disp / 16.0
 
@@ -87,7 +88,8 @@ class DataPreprocessor:
         encoded_disp[:, :, 2] = d_r
         return encoded_disp
 
-    def _save_prediction(self, disp_dir, conf_dir, disp, conf):
+    @staticmethod
+    def _save_prediction(disp_dir, conf_dir, disp, conf):
         """
         Save predicted disparity and confidence maps
 
@@ -97,10 +99,8 @@ class DataPreprocessor:
         :param conf: confidence map
         :return: None
         """
-        encoded_disp = self._disp_encoding(disp)
-        conf = (255 * conf).astype('uint8')
-        cv2.imwrite(disp_dir, encoded_disp)
-        cv2.imwrite(conf_dir, conf)
+        np.save(disp_dir, disp)
+        np.save(conf_dir, conf)
 
     def _process_frame(self, l_path, r_path, disp_path, conf_path):
         """
@@ -112,14 +112,14 @@ class DataPreprocessor:
         :param conf_path: path to save the confidence mask
         :return: None
         """
-        l_im = cv2.imread(l_path, cv2.IMREAD_COLOR)
-        r_im = cv2.imread(r_path, cv2.IMREAD_COLOR)
-        disp, mask = self._cal_disp(l_im, r_im)
+        l_im = Image.open(l_path).convert("RGB")  # open images by PIL to be consistent with dataloader
+        r_im = Image.open(r_path).convert("RGB")
+        disp, mask = self._cal_disp(np.asarray(l_im), np.asarray(r_im))
         l_im_tensor = self.to_tensor(l_im).unsqueeze(dim=0).to(self.device)
         r_im_tensor = self.to_tensor(r_im).unsqueeze(dim=0).to(self.device)
         disp_tensor = self.to_tensor(disp).unsqueeze(dim=0).to(torch.float32).to(self.device)
         mask_tensor = self.to_tensor(mask).unsqueeze(dim=0).to(torch.float32).to(self.device)
-        conf_tensor = self.conf_gen.cal_confidence_hw(l_im_tensor, r_im_tensor, disp_tensor, mask_tensor)
+        conf_tensor = self.conf_gen.cal_confidence(l_im_tensor, r_im_tensor, disp_tensor, mask_tensor)
         conf = conf_tensor.detach().cpu().numpy()
         conf = np.squeeze(conf)
         self._save_prediction(disp_path, conf_path, disp, conf)

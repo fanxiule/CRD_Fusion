@@ -73,16 +73,12 @@ class CRDFusionDataset(data.Dataset):
 
     def _get_disp(self, disp_path):
         """
-        Open an RGB representation of disparity map, convert it to true disparity and then a torch tensor.
-        Implementation is based on sintel development kit
+        Open a disparity map and convert it to a torch tensor.
 
         :param disp_path: directory to the disparity map
         :return: a disparity tensor
         """
-        f_in = np.array(Image.open(disp_path))
-        d_r = f_in[:, :, 0]
-        d_g = f_in[:, :, 1]
-        disp = d_r * 4.0 + d_g / 64.0
+        disp = np.load(disp_path)
         disp = self.to_tensor(disp).float()
         return disp
 
@@ -93,7 +89,7 @@ class CRDFusionDataset(data.Dataset):
         :param conf_path: directory to the confidence map
         :return: a confidence tensor
         """
-        conf = Image.open(conf_path)
+        conf = np.load(conf_path)
         conf = self.to_tensor(conf)
         conf[conf < self.conf_thres] = 0
         return conf

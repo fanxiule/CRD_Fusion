@@ -58,8 +58,8 @@ class SceneFlowPreprocessor(DataPreprocessor):
                             frame_count, len(frames), subset, split, scene, sub_scene))
                         l_im_frame = os.path.join(self.l_im_path, f)
                         r_im_frame = os.path.join(self.r_im_path, f)
-                        disp_frame = os.path.join(self.disp_path, f)
-                        conf_frame = os.path.join(self.conf_path, f)
+                        disp_frame = os.path.join(self.disp_path, f.replace(".png", ".npy"))
+                        conf_frame = os.path.join(self.conf_path, f.replace(".png", ".npy"))
                         self._process_frame(l_im_frame, r_im_frame, disp_frame, conf_frame)
                         frame_to_save = scene_path_to_save + f
                         if split == "TRAIN":
@@ -94,8 +94,8 @@ class SceneFlowPreprocessor(DataPreprocessor):
                 print("Processing frame %d/%d in %s subset %s scene" % (frame_count, len(frames), subset, scene))
                 l_im_frame = os.path.join(self.l_im_path, f)
                 r_im_frame = os.path.join(self.r_im_path, f)
-                disp_frame = os.path.join(self.disp_path, f)
-                conf_frame = os.path.join(self.conf_path, f)
+                disp_frame = os.path.join(self.disp_path, f.replace(".png", ".npy"))
+                conf_frame = os.path.join(self.conf_path, f.replace(".png", ".npy"))
                 self._process_frame(l_im_frame, r_im_frame, disp_frame, conf_frame)
                 frame_to_save = scene_path_to_save + f
                 self.train_list.append(frame_to_save)
@@ -132,8 +132,8 @@ class SceneFlowPreprocessor(DataPreprocessor):
                             frame_count, len(frames), subset, focal, direction, speed))
                         l_im_frame = os.path.join(self.l_im_path, f)
                         r_im_frame = os.path.join(self.r_im_path, f)
-                        disp_frame = os.path.join(self.disp_path, f)
-                        conf_frame = os.path.join(self.conf_path, f)
+                        disp_frame = os.path.join(self.disp_path, f.replace(".png", ".npy"))
+                        conf_frame = os.path.join(self.conf_path, f.replace(".png", ".npy"))
                         self._process_frame(l_im_frame, r_im_frame, disp_frame, conf_frame)
                         frame_to_save = scene_path_to_save + f
                         self.train_list.append(frame_to_save)

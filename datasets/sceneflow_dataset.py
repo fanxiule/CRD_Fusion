@@ -68,8 +68,8 @@ class SceneFlowDataset(CRDFusionDataset):
         raw_inputs = {}
         l_rgb_path = os.path.join(self.data_path, subset, "frames_finalpass", path, "left", "%s.png" % frame_id)
         r_rgb_path = os.path.join(self.data_path, subset, "frames_finalpass", path, "right", "%s.png" % frame_id)
-        disp_path = os.path.join(self.data_path, subset, "raw_disp", path, "%s.png" % frame_id)
-        conf_path = os.path.join(self.data_path, subset, "conf", path, "%s.png" % frame_id)
+        disp_path = os.path.join(self.data_path, subset, "raw_disp", path, "%s.npy" % frame_id)
+        conf_path = os.path.join(self.data_path, subset, "conf", path, "%s.npy" % frame_id)
 
         raw_inputs['l_rgb'] = self._get_rgb(l_rgb_path)
         raw_inputs['r_rgb'] = self._get_rgb(r_rgb_path)

@@ -6,7 +6,7 @@ import networks
 
 
 class CRDFusionNet(nn.Module):
-    def __init__(self, scale_list, max_disp, img_h, img_w, baseline=False, gen_fusion=True, reg_fusion=True):
+    def __init__(self, scale_list, max_disp, img_h, img_w, baseline=False, gen_fusion=False, reg_fusion=True):
         """
         The high-level module for the whole network
 
@@ -15,7 +15,7 @@ class CRDFusionNet(nn.Module):
         :param img_h: height of the input image
         :param img_w: width of the input image
         :param baseline: if set to True, the baseline model is used. Default to False
-        :param gen_fusion: if set to True, raw disparity fusion applied to cost generation module. Default to True
+        :param gen_fusion: if set to True, raw disparity fusion applied to cost generation module. Default to False
         :param reg_fusion: if set to True, raw disparity fusion applied to disparity regression module. Default to True
         """
         super(CRDFusionNet, self).__init__()

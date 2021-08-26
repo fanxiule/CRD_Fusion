@@ -63,8 +63,8 @@ class Kitti2015FullDataset(CRDFusionDataset):
         raw_inputs = {}
         l_rgb_path = os.path.join(self.data_path, "image_2", frame)
         r_rgb_path = os.path.join(self.data_path, "image_3", frame)
-        disp_path = os.path.join(self.data_path, "raw_disp", frame)
-        conf_path = os.path.join(self.data_path, "conf", frame)
+        disp_path = os.path.join(self.data_path, "raw_disp", frame.replace(".png", ".npy"))
+        conf_path = os.path.join(self.data_path, "conf", frame.replace(".png", ".npy"))
 
         raw_inputs['l_rgb'] = self._get_rgb(l_rgb_path)
         raw_inputs['r_rgb'] = self._get_rgb(r_rgb_path)

@@ -15,7 +15,7 @@ class EvalOptions:
         self.parser.add_argument("--checkpt",
                                  type=str,
                                  help="directory to pretrained checkpoint files",
-                                 default="/home/xfan/Documents/Avidbots/Experiments/CRD_Fusion/models/crd_fusion/checkpts/weights_100")
+                                 default="/home/xfan/Documents/Avidbots/Experiments/CRD_Fusion/models/pretrained/weights_15")
         self.parser.add_argument("--log_dir",
                                  type=str,
                                  help="directory to save Tensorboard event and optionally the predicted disparity map",
@@ -30,11 +30,11 @@ class EvalOptions:
         self.parser.add_argument("--resized_height",
                                  type=int,
                                  help="image height after resizing",
-                                 default=512)
+                                 default=544)
         self.parser.add_argument("--resized_width",
                                  type=int,
                                  help="image width after resizing",
-                                 default=640)
+                                 default=960)
         self.parser.add_argument("--downscale",
                                  type=int,
                                  help="downscaling factor before image resizing",
@@ -43,7 +43,7 @@ class EvalOptions:
                                  type=int,
                                  help="maximum disparity for prediction at the full spatial resolution. Must agree with "
                                       "the checkpoint files",
-                                 default=128)
+                                 default=192)
 
         # EVALUATION options
         self.parser.add_argument("--model_name",

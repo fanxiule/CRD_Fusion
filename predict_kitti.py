@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 
 import torch
+import torch.nn.functional as f
 from torch.utils.data import DataLoader
 
 from datasets import KITTI2012TestDataset, KITTI2015TestDataset, Kitti2015Dataset, Kitti2012Dataset
@@ -32,7 +33,7 @@ def parse_args():
     parser.add_argument("--device", type=str, help="test device", choices=["cpu", "cuda"], default="cuda")
     parser.add_argument("--dataset", type=str, help="select a KITTI test set", default="kitti2015_val",
                         choices=["kitti2015_test", "kitti2012_test", "kitti2015_val", "kitti2012_val"])
-    parser.add_argument("--max_disp", type=int, help="max disparity range according to the checkpt file", default=128)
+    parser.add_argument("--max_disp", type=int, help="max disparity range according to the checkpt file", default=192)
     parser.add_argument("--resized_height", type=int, help="image height after resizing", default=376)
     parser.add_argument("--resized_width", type=int, help="image width after resizing", default=1248)
     parser.add_argument("--conf_threshold", type=float, help="confidence threshold for raw disparity", default=0.8)
@@ -42,14 +43,13 @@ def parse_args():
     return parser.parse_args()
 
 
-def save_pred(pred_disp, occ, conf, thrs, frame_id, log_path):
+def save_pred(pred_disp, occ, conf, frame_id, log_path):
     """
     Save predictions
 
     :param pred_disp: predicted disparity map
     :param occ: occlusion mask
     :param conf: confidence mask
-    :param thrs: threshold for confidence mask
     :param frame_id: frame id to name the files
     :param log_path: save directory
     :return: None
@@ -70,17 +70,14 @@ def save_pred(pred_disp, occ, conf, thrs, frame_id, log_path):
     # save occ
     occ = occ.detach().cpu().numpy()
     occ = np.squeeze(occ)
-    occ = (255 * occ).astype(np.uint8)
-    filename = os.path.join(log_path, "occ_%s" % frame_id)
-    cv2.imwrite(filename, occ)
+    filename = os.path.join(log_path, "occ_%s" % frame_id.replace(".png", ".npy"))
+    np.save(filename, occ)
 
     # save conf
     conf = conf.detach().cpu().numpy()
     conf = np.squeeze(conf)
-    conf[conf < thrs] = 0
-    conf = (255 * conf).astype(np.uint8)
-    filename = os.path.join(log_path, "conf_%s" % frame_id)
-    cv2.imwrite(filename, conf)
+    filename = os.path.join(log_path, "conf_%s" % frame_id.replace(".png", ".npy"))
+    np.save(filename, conf)
 
 
 def predict(opts):
@@ -92,7 +89,7 @@ def predict(opts):
     """
     log_path = os.path.join(opts.log_dir, opts.model_name)
     feature_scale_list = [0, 1, 2, 3]
-    model = CRDFusionNet(feature_scale_list, opts.max_disp, opts.resized_height, opts.resized_width, False, True, True)
+    model = CRDFusionNet(feature_scale_list, opts.max_disp, opts.resized_height, opts.resized_width, False, False, True)
     if opts.checkpt is not None and os.path.isdir(opts.checkpt):
         model.load_model(opts.checkpt)
     else:
@@ -115,7 +112,7 @@ def predict(opts):
         predict_dataset = dataset(data_path, opts.max_disp, 1, opts.resized_height, opts.resized_width,
                                   opts.conf_threshold, False, True, False)
     predict_loader = DataLoader(predict_dataset, 1, False, num_workers=0, pin_memory=True, drop_last=False)
-    conf_gen = ConfGeneration(opts.resized_height, opts.resized_width, opts.device, False)
+    conf_gen = ConfGeneration(opts.device, True)
 
     num_test_samples = len(predict_dataset)
 
@@ -125,7 +122,7 @@ def predict(opts):
     print("Save predictions: %r" % opts.save_pred)
     print("Dataset: %s" % opts.dataset)
     print("Input size: %d x %d" % (opts.resized_height, opts.resized_width))
-    print("Total number of test samples %d" % num_test_samples)
+    print("Total number of test samples: %d" % num_test_samples)
     print("Max disp: %d" % opts.max_disp)
     print("Conf threshold: %.2f" % opts.conf_threshold)
     print("Post processing: %r" % opts.post_processing)
@@ -139,21 +136,25 @@ def predict(opts):
                 if k != "frame_id" and k != "left_pad" and k != "top_pad":
                     inputs[k] = v.to(opts.device)
             batch_start_time = time.time()
-            inputs['mask'] = conf_gen.cal_confidence(inputs['l_rgb_non_norm'], inputs['r_rgb_non_norm'],
-                                                     opts.max_disp * inputs['raw_disp'])
+            # confidence calculation is consistent to how it is done in preprocessing
+            inputs['mask'] = conf_gen.cal_confidence(
+                inputs['l_rgb_non_norm'][:, :, inputs['top_pad'][0]:, inputs['left_pad'][0]:],
+                inputs['r_rgb_non_norm'][:, :, inputs['top_pad'][0]:, inputs['left_pad'][0]:],
+                inputs['raw_disp_non_norm'][:, :, inputs['top_pad'][0]:, inputs['left_pad'][0]:])
+            inputs['mask'][inputs['mask'] < opts.conf_threshold] = 0
+            inputs['mask'] = f.pad(inputs['mask'], (inputs['left_pad'][0], 0, inputs['top_pad'][0], 0), 'replicate')
             outputs = model(inputs['l_rgb'], inputs['r_rgb'], inputs['raw_disp'], inputs['mask'])
             # undo padding on prediction
-            outputs['refined_disp0'] = outputs['refined_disp0'][:, :, inputs['top_pad']:, inputs['left_pad']:]
-            outputs['occ0'] = outputs['occ0'][:, :, inputs['top_pad']:, inputs['left_pad']:]
-            inputs['mask'] = inputs['mask'][:, :, inputs['top_pad']:, inputs['left_pad']:]
+            outputs['refined_disp0'] = outputs['refined_disp0'][:, :, inputs['top_pad'][0]:, inputs['left_pad'][0]:]
+            outputs['occ0'] = outputs['occ0'][:, :, inputs['top_pad'][0]:, inputs['left_pad'][0]:]
+            inputs['mask'] = inputs['mask'][:, :, inputs['top_pad'][0]:, inputs['left_pad'][0]:]
             if opts.post_processing:
                 outputs['final_disp'] = post_process(outputs['refined_disp0'], outputs['occ0'], opts.occ_threshold)
             else:
                 outputs['final_disp'] = outputs['refined_disp0']
             duration += (time.time() - batch_start_time)
             if opts.save_pred:
-                save_pred(outputs['final_disp'], outputs['occ0'], inputs['mask'], opts.conf_threshold,
-                          inputs['frame_id'][0], log_path)
+                save_pred(outputs['final_disp'], outputs['occ0'], inputs['mask'], inputs['frame_id'][0], log_path)
     print("Frame rate: %.4f" % (num_test_samples / duration))
 
 

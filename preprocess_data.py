@@ -19,7 +19,7 @@ def parse_arguments():
     parser.add_argument("--max_disp",
                         type=int,
                         help="Maximum disparity for stereo matching",
-                        default=128)
+                        default=192)
     parser.add_argument("--block_size",
                         type=int,
                         help="Block size for stereo matching",
