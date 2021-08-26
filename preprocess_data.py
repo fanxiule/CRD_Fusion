@@ -67,6 +67,13 @@ def main(opt):
         preprocessor = preprocessor(dataset_path, opt.max_disp, opt.block_size, opt.match_method, opt.device,
                                     opt.full_ZSAD)
     print("Start preprocessing %s dataset" % opt.dataset_name)
+    print("Stereo method: %s" % opt.match_method)
+    print("Max disparity %d" % opt.max_disp)
+    print("Block size: %d" % opt.block_size)
+    print("Full ZSAD: %r" % opt.full_ZSAD)
+    print("Train and validation split (for KITTI): %.2f" % opt.train_val_split_per)
+    print("Random seed (for KITTI): %d" % opt.random_seed)
+    print("Device: %s" % opt.device)
     preprocessor.preprocess()
 
 
