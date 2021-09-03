@@ -39,11 +39,12 @@ def save_pred(pred_disp, pred_occ, frame_id, log_path):
             f_id = frame_id[i]
             save_path = pred_path
         disp = torch.squeeze(pred_disp[i]).detach().cpu().numpy()
-        occ = torch.squeeze(pred_occ[i]).detach().cpu().numpy()
         disp_path = os.path.join(save_path, f_id) + ".npy"
-        occ_path = os.path.join(save_path, "occ_%s" % f_id) + ".npy"
         np.save(disp_path, disp)
-        np.save(occ_path, occ)
+        if pred_occ is not None:
+            occ = torch.squeeze(pred_occ[i]).detach().cpu().numpy()
+            occ_path = os.path.join(save_path, "occ_%s" % f_id) + ".npy"
+            np.save(occ_path, occ)
 
 
 def log_time(epe, bad3, duration, batch_sz, start_time, current_step, total_steps):
@@ -254,7 +255,10 @@ def evaluate(opts):
                 refined_noc_err['bad3'] += batch_num * noc_refined_avg_bad3
 
             if opts.save_pred:
-                save_pred(outputs['final_disp'], outputs['occ0'], inputs['frame_id'], log_path)
+                if 'occ0' in outputs:
+                    save_pred(outputs['final_disp'], outputs['occ0'], inputs['frame_id'], log_path)
+                else:
+                    save_pred(outputs['final_disp'], None, inputs['frame_id'], log_path)
 
             if current_step % opts.log_frequency == 0:
                 log_time(avg_final['epe'], avg_final['bad3'], duration, batch_num, start_time, current_step,
