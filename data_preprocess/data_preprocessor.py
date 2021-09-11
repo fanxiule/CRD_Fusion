@@ -69,26 +69,6 @@ class DataPreprocessor:
         return disp, mask
 
     @staticmethod
-    def _disp_encoding(disp):
-        """
-        Encode the raw disparity with subpixel-level accuracy into a color image. Utilize R and G channels to store
-        disparity. Implementation is based on sintel development kit. .png files are more compact than .npy files.
-
-        :param disp: raw disparity
-        :return: encoded disparity in the form of BGR image (default OpenCV format)
-        """
-        disp[disp > 1024] = 1024
-        disp[disp < 0] = 0
-        encoded_disp = np.zeros((disp.shape[0], disp.shape[1], 3), dtype='uint8')
-        d_r, remainder = np.divmod(disp, 4.0)
-        d_r = d_r.astype('uint8')
-        d_g = (64.0 * remainder).astype('uint8')
-        # Note that OpenCV by default treats image as BGR instead of RGB
-        encoded_disp[:, :, 1] = d_g
-        encoded_disp[:, :, 2] = d_r
-        return encoded_disp
-
-    @staticmethod
     def _save_prediction(disp_dir, conf_dir, disp, conf):
         """
         Save predicted disparity and confidence maps
