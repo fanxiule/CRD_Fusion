@@ -1,4 +1,6 @@
 from .sceneflow_preprocessor import SceneFlowPreprocessor
 from .kitti2015_preprocessor import Kitti15Preprocessor
 from .kitti2012_preprocessor import Kitti12Preprocessor
+from .realsense_preprocessor import RealSensePreprocessor
+from .zed_preprocessor import ZEDPreprocessor
 from .conf_generation import ConfGeneration

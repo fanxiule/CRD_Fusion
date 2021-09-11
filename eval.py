@@ -157,7 +157,9 @@ def evaluate(opts):
 
     dataset_list = {'kitti2015': datasets.Kitti2015Dataset,
                     'kitti2012': datasets.Kitti2012Dataset,
-                    'SceneFlow': datasets.SceneFlowDataset}
+                    'SceneFlow': datasets.SceneFlowDataset,
+                    'realsense': datasets.RealSenseDataset,
+                    'zed': datasets.ZEDDataset}
     dataset = dataset_list[opts.dataset]
     data_path = os.path.join(opts.data_path, opts.dataset)
     eval_dataset = dataset(data_path, opts.max_disp, opts.downscale, opts.resized_height, opts.resized_width,
@@ -224,25 +226,26 @@ def evaluate(opts):
             total_time += duration
 
             batch_num = inputs['l_rgb'].size()[0]
-            avg_final = {}
-            avg_refined = {}
+            avg_final = {'epe': 0.0, 'bad3': 0.0, 'err_map': None}
+            avg_refined = {'epe': 0.0, 'bad3': 0.0, 'err_map': None}
 
-            avg_final['epe'], avg_final['bad3'], avg_final['err_map'] = compute_disp_error(outputs['final_disp'],
-                                                                                           inputs['gt_disp'])
-            avg_refined['epe'], avg_refined['bad3'], avg_refined['err_map'] = compute_disp_error(
-                outputs['refined_disp0'], inputs['gt_disp'])
+            if 'gt_disp' in inputs:
+                avg_final['epe'], avg_final['bad3'], avg_final['err_map'] = compute_disp_error(outputs['final_disp'],
+                                                                                               inputs['gt_disp'])
+                avg_refined['epe'], avg_refined['bad3'], avg_refined['err_map'] = compute_disp_error(
+                    outputs['refined_disp0'], inputs['gt_disp'])
 
-            if torch.isnan(avg_final['epe']) or torch.isnan(avg_final['bad3']) or torch.isnan(
-                    avg_refined['epe']) or torch.isnan(avg_refined['bad3']):
-                # Mostly for SceneFlow where several Test images cause NaN error
-                handle_nan_err(avg_final)
-                handle_nan_err(avg_refined)
-                num_valid_samples -= batch_num
+                if torch.isnan(avg_final['epe']) or torch.isnan(avg_final['bad3']) or torch.isnan(
+                        avg_refined['epe']) or torch.isnan(avg_refined['bad3']):
+                    # Mostly for SceneFlow where several Test images cause NaN error
+                    handle_nan_err(avg_final)
+                    handle_nan_err(avg_refined)
+                    num_valid_samples -= batch_num
 
-            final_err['epe'] += batch_num * avg_final['epe']
-            final_err['bad3'] += batch_num * avg_final['bad3']
-            refined_err['epe'] += batch_num * avg_refined['epe']
-            refined_err['bad3'] += batch_num * avg_refined['bad3']
+                final_err['epe'] += batch_num * avg_final['epe']
+                final_err['bad3'] += batch_num * avg_final['bad3']
+                refined_err['epe'] += batch_num * avg_refined['epe']
+                refined_err['bad3'] += batch_num * avg_refined['bad3']
 
             if 'noc_gt_disp' in inputs:  # for KITTI
                 noc_final_avg_epe, noc_final_avg_bad3, _ = compute_disp_error(outputs['final_disp'],

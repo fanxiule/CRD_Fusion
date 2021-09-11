@@ -14,7 +14,7 @@ def parse_arguments():
     parser.add_argument("--dataset_name",
                         type=str,
                         help="Name of the dataset",
-                        choices=["kitti2015", "kitti2012", "SceneFlow"],
+                        choices=["kitti2015", "kitti2012", "SceneFlow", "realsense", "zed"],
                         default="SceneFlow")
     parser.add_argument("--max_disp",
                         type=int,
@@ -53,7 +53,9 @@ def parse_arguments():
 def main(opt):
     preprocessor_dict = {"kitti2015": data_preprocess.Kitti15Preprocessor,
                          "kitti2012": data_preprocess.Kitti12Preprocessor,
-                         "SceneFlow": data_preprocess.SceneFlowPreprocessor}
+                         "SceneFlow": data_preprocess.SceneFlowPreprocessor,
+                         "realsense": data_preprocess.RealSensePreprocessor,
+                         "zed": data_preprocess.ZEDPreprocessor}
     preprocessor = preprocessor_dict[opt.dataset_name]
     dataset_path = os.path.join(opt.dataset_path, opt.dataset_name)
     if not os.path.exists(dataset_path):
@@ -63,17 +65,24 @@ def main(opt):
         assert opt.train_val_split_per is not None, "Need to specify the train and val split for this dataset"
         preprocessor = preprocessor(dataset_path, opt.max_disp, opt.block_size, opt.match_method, opt.device,
                                     opt.full_ZSAD, opt.train_val_split_per, opt.random_seed)
-    else:
+    elif opt.dataset_name == "SceneFlow":
         preprocessor = preprocessor(dataset_path, opt.max_disp, opt.block_size, opt.match_method, opt.device,
                                     opt.full_ZSAD)
+    elif opt.dataset_name == "realsense":
+        preprocessor = preprocessor(dataset_path, opt.device, opt.full_ZSAD, opt.train_val_split_per, opt.random_seed)
+    elif opt.dataset_name == "zed":
+        preprocessor = preprocessor(dataset_path, opt.train_val_split_per, opt.random_seed)
+    else:
+        print("Cannot find the specified dataset")
+        raise RuntimeError
     print("Start preprocessing %s dataset" % opt.dataset_name)
-    print("Stereo method: %s" % opt.match_method)
-    print("Max disparity %d" % opt.max_disp)
-    print("Block size: %d" % opt.block_size)
-    print("Full ZSAD: %r" % opt.full_ZSAD)
-    print("Train and validation split (for KITTI): %.2f" % opt.train_val_split_per)
-    print("Random seed (for KITTI): %d" % opt.random_seed)
-    print("Device: %s" % opt.device)
+    print("Stereo method (for SceneFlow, KITTI): %s" % opt.match_method)
+    print("Max disparity (for SceneFlow, KITTI): %d" % opt.max_disp)
+    print("Block size (for SceneFlow, KITTI): %d" % opt.block_size)
+    print("Full ZSAD (for SceneFlow, KITTI, RealSense): %r" % opt.full_ZSAD)
+    print("Train and validation split (for KITTI, RealSense, ZED): %.2f" % opt.train_val_split_per)
+    print("Random seed (for KITTI, RealSense, ZED): %d" % opt.random_seed)
+    print("Device (for SceneFlow, KITTI, RealSense): %s" % opt.device)
     preprocessor.preprocess()
 
 

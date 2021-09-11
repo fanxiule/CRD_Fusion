@@ -26,7 +26,7 @@ class EvalOptions:
                                  type=str,
                                  help="dataset to train on",
                                  default="SceneFlow",
-                                 choices=["kitti2015", "kitti2012", "SceneFlow"])
+                                 choices=["kitti2015", "kitti2012", "SceneFlow", "realsense", "zed"])
         self.parser.add_argument("--resized_height",
                                  type=int,
                                  help="image height after resizing",

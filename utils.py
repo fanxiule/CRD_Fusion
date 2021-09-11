@@ -1,6 +1,8 @@
 import re
+import cv2
 import torch
 import numpy as np
+from PIL import Image
 
 
 def sec_to_hms(t):
@@ -124,3 +126,30 @@ def unpad_imgs(inputs, outputs):
     outputs['refined_disp0'] = outputs['refined_disp0'][:, :, inputs['top_pad']:, inputs['left_pad']:]
     if "occ0" in outputs:
         outputs['occ0'] = outputs['occ0'][:, :, inputs['top_pad']:, inputs['left_pad']:]
+
+
+def decode_disp(disp_path):
+    """
+    Read disparity map saved in png format and convert it from RGB to disparity values. The disparity map is saved similar
+    to how it is done in Sintel development kit
+
+    :param disp_path: path to the disparity image
+    :return: disparity map
+    """
+    f_in = np.array(Image.open(disp_path))
+    d_r = f_in[:, :, 0]
+    d_g = f_in[:, :, 1]
+    disp = d_r * 4.0 + d_g / 64.0
+    return disp
+
+
+def save_conf(conf, conf_path):
+    """
+    Save confidence map as a grayscale image
+
+    :param conf: confidence map
+    :param conf_path: path to save the confidence map
+    :return: None
+    """
+    conf = (255 * conf).astype('uint8')
+    cv2.imwrite(conf_path, conf)

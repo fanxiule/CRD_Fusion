@@ -27,7 +27,8 @@ class TrainOptions:
                                  type=str,
                                  help="dataset to train on",
                                  default="SceneFlow",
-                                 choices=["kitti2015", "kitti2012", "kitti2015_full", "kitti2012_full", "SceneFlow"])
+                                 choices=["kitti2015", "kitti2012", "kitti2015_full", "kitti2012_full", "SceneFlow",
+                                          "realsense", "zed"])
         self.parser.add_argument("--resized_height",
                                  type=int,
                                  help="image height after resizing",

@@ -5,3 +5,5 @@ from .kitti2015test_dataset import KITTI2015TestDataset
 from .kitti2012test_dataset import KITTI2012TestDataset
 from .kitti2015full_dataset import Kitti2015FullDataset
 from .kitti2012full_dataset import Kitti2012FullDataset
+from .realsense_dataset import RealSenseDataset
+from .zed_dataset import ZEDDataset
