@@ -34,7 +34,8 @@ class DispRegressor(nn.Module):
         :return: None
         """
         self.candidate_disp = self.candidate_disp.to(*args, **kwargs)
-        self.conv.to(*args, **kwargs)
+        if self.fusion:
+            self.conv.to(*args, **kwargs)
 
     def _soft_argmin(self, prob):
         """
