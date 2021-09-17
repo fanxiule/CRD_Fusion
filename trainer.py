@@ -46,8 +46,7 @@ class CRDFusionTrainer:
             self.feature_scale_list.append(self.opt.feature_downscale)  # scale list for direct upsampling in refinement
 
         self.model = CRDFusionNet(self.feature_scale_list, self.opt.max_disp / self.opt.downscale,
-                                  self.opt.resized_height, self.opt.resized_width, self.opt.baseline,
-                                  self.opt.gen_fusion, self.opt.reg_fusion)
+                                  self.opt.resized_height, self.opt.resized_width, self.opt.baseline, self.opt.fusion)
         self.model.to(self.opt.device)
         parameters_to_train = self.model.get_params()
         total_params = sum(p.numel() for p in parameters_to_train if p.requires_grad)
@@ -59,7 +58,7 @@ class CRDFusionTrainer:
             self.loss = SelfSupLoss(self.opt.supervision_weight, self.opt.photo_weight, self.opt.smooth_weight,
                                     self.opt.occ_weight, self.opt.max_disp / self.opt.downscale,
                                     self.feature_scale_list, self.opt.resized_height, self.opt.resized_width,
-                                    self.opt.occ_detection, self.opt.occ_epoch, self.opt.loss_fusion)
+                                    self.opt.occ_detection, self.opt.occ_epoch, self.opt.loss_conf)
         self.loss.to(self.opt.device)
 
         # optimization
@@ -125,9 +124,8 @@ class CRDFusionTrainer:
         print("Conf threshold: %.2f" % self.opt.conf_threshold)
         print("ImageNet norm: %r" % self.opt.imagenet_norm)
         print("Scale list: %s" % ', '.join(str(s) for s in self.feature_scale_list))
-        print("Raw disp fusion in generator: %r" % self.opt.gen_fusion)
-        print("Raw disp fusion in regressor: %r" % self.opt.reg_fusion)
-        print("Raw disp fusion in loss: %r" % self.opt.loss_fusion)
+        print("Raw disp fusion in model: %r" % self.opt.fusion)
+        print("Confidence in loss: %r" % self.opt.loss_conf)
         print("Using baseline model: %r" % self.opt.baseline)
         print("Occlusion detection: %r" % self.opt.occ_detection)
         print("Occlusion threshold used in post processing: %.2f" % self.opt.occ_threshold)

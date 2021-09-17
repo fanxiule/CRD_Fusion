@@ -89,7 +89,7 @@ def predict(opts):
     """
     log_path = os.path.join(opts.log_dir, opts.model_name)
     feature_scale_list = [0, 1, 2, 3]
-    model = CRDFusionNet(feature_scale_list, opts.max_disp, opts.resized_height, opts.resized_width, False, False, True)
+    model = CRDFusionNet(feature_scale_list, opts.max_disp, opts.resized_height, opts.resized_width, False, True)
     if opts.checkpt is not None and os.path.isdir(opts.checkpt):
         model.load_model(opts.checkpt)
     else:

@@ -40,7 +40,7 @@ class SSIM(nn.Module):
 
 class SelfSupLoss(nn.Module):
     def __init__(self, alpha_disp, alpha_warp, alpha_smooth, alpha_occ, max_disp, scale_list, resized_h,
-                 resized_w, detect_occ, occ_epoch, fusion=True):
+                 resized_w, detect_occ, occ_epoch, loss_conf=True):
         """
         A module to compute the self-supervised training loss
 
@@ -54,7 +54,7 @@ class SelfSupLoss(nn.Module):
         :param resized_w: image width after downscaling and resizing
         :param detect_occ: if set to True, the occlusion mask is generated and applied to training loss
         :param occ_epoch: a preset epoch number. When current epoch is greater than the preset one, apply occlusion mask in supervision loss and smoothness loss
-        :param fusion: if set to True, raw disparity fusion is applied to loss computation
+        :param loss_conf: if set to True, confidence is applied to loss computation
         """
         super(SelfSupLoss, self).__init__()
         self.alpha_disp = alpha_disp
@@ -68,9 +68,7 @@ class SelfSupLoss(nn.Module):
         self.detect_occ = detect_occ
         self.occ_epoch = occ_epoch
         self.current_epoch = 0
-        self.fusion = fusion
-        if not self.fusion:
-            self.alpha_disp = 0  # disable raw disparity supervision with no fusion
+        self.loss_conf = loss_conf
         if not self.detect_occ:
             self.alpha_occ = 0  # disable occlusion cross entropy loss when detect occlusion is disabled
             self.occ_epoch = -1  # cannot apply occ to loss when occ detection is not enabled
@@ -173,7 +171,8 @@ class SelfSupLoss(nn.Module):
         SSIM_loss = torch.linalg.norm(SSIM_loss, ord=1, dim=1, keepdim=True)
 
         recon_loss = alpha * SSIM_loss + (1 - alpha) * l1_loss
-        recon_loss = torch.mul(recon_loss, 1 - conf_mask)
+        if self.loss_conf:
+            recon_loss = torch.mul(recon_loss, 1 - conf_mask)
         recon_loss = torch.mul(recon_loss, occlusion)
         recon_loss = torch.sum(recon_loss)
         return recon_loss
@@ -189,7 +188,11 @@ class SelfSupLoss(nn.Module):
         :return: supervision loss
         """
         supervision_loss = self.smoothL1(raw_disp, pred_disp)
-        supervision_loss = torch.mul(supervision_loss, conf_mask)
+        if self.loss_conf:
+            supervision_loss = torch.mul(supervision_loss, conf_mask)
+        else:
+            valid_mask = raw_disp > 0
+            supervision_loss = torch.mul(valid_mask, supervision_loss)
         if 0 <= self.occ_epoch < self.current_epoch:
             supervision_loss = torch.mul(supervision_loss, occlusion)
         supervision_loss = torch.sum(supervision_loss)
@@ -246,10 +249,6 @@ class SelfSupLoss(nn.Module):
         img_grad_x = self._cal_img_smoothness(l_rgb, self.img_sobel_x)
         img_grad_y = self._cal_img_smoothness(l_rgb, self.img_sobel_y)
         occlusion_mask = torch.ones_like(pred['refined_disp0'])
-        if not self.fusion:
-            conf_mask = torch.zeros_like(conf)
-        else:
-            conf_mask = conf
 
         disp_sup_loss = 0
         reconstruct_loss = 0
@@ -262,9 +261,9 @@ class SelfSupLoss(nn.Module):
             if self.detect_occ:
                 occlusion_mask = self.upsample['up%d' % s](pred['occ%d' % s])
                 bce_loss += weight * self._cal_mask_loss(occlusion_mask)
-            disp_sup_loss += weight * self._cal_supervision_loss(self.max_disp * raw_disp, conf_mask, up_pred_disp,
+            disp_sup_loss += weight * self._cal_supervision_loss(self.max_disp * raw_disp, conf, up_pred_disp,
                                                                  occlusion_mask)
-            reconstruct_loss += weight * self._cal_reconstruct_loss(l_rgb, r_rgb, up_pred_disp, batch_num, conf_mask,
+            reconstruct_loss += weight * self._cal_reconstruct_loss(l_rgb, r_rgb, up_pred_disp, batch_num, conf,
                                                                     occlusion_mask)
             smoothness_loss += weight * self._cal_smoothness_loss(up_pred_disp, img_grad_x, img_grad_y, occlusion_mask)
 
