@@ -9,7 +9,6 @@ class CostGenerator(nn.Module):
         the given disparity range
 
         :param max_disp_at_scale: maximum disparity range at the lowest resolution scale
-        :param fusion: if set to True, the pseudo probability of raw disparity is fused with the cost volume. Default to True
         """
         super(CostGenerator, self).__init__()
         self.max_disp_at_scale = max_disp_at_scale
