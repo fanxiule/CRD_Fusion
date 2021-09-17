@@ -147,7 +147,7 @@ def evaluate(opts):
         feature_scale_list.append(opts.feature_downscale)  # scale list for direct upsampling in refinement
 
     model = CRDFusionNet(feature_scale_list, opts.max_disp / opts.downscale, opts.resized_height, opts.resized_width,
-                         opts.baseline, opts.gen_fusion, opts.reg_fusion)
+                         opts.baseline, opts.fusion)
     if opts.checkpt is not None and os.path.isdir(opts.checkpt):
         model.load_model(opts.checkpt)
     else:
@@ -186,8 +186,7 @@ def evaluate(opts):
     print("Conf threshold: %.2f" % opts.conf_threshold)
     print("ImageNet norm: %r" % opts.imagenet_norm)
     print("Scale list: %s" % ', '.join(str(s) for s in feature_scale_list))
-    print("Raw disp fusion in generator: %r" % opts.gen_fusion)
-    print("Raw disp fusion in regressor: %r" % opts.reg_fusion)
+    print("Raw disp fusion in model: %r" % opts.fusion)
     print("Using baseline model: %r" % opts.baseline)
     print("Occlusion detection: %r" % opts.occ_detection)
     print("Occlusion threshold used in post processing: %.2f" % opts.occ_threshold)

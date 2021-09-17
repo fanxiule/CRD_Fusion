@@ -86,12 +86,9 @@ class EvalOptions:
         self.parser.add_argument("--multi_step_upsample",
                                  action="store_true",
                                  help="if set, the coarse disparity map is upsampled gradually during refinement")
-        self.parser.add_argument("--gen_fusion",
+        self.parser.add_argument("--fusion",
                                  action="store_true",
-                                 help="if set, raw disparity fusion is applied to the cost generation module")
-        self.parser.add_argument("--reg_fusion",
-                                 action="store_true",
-                                 help="if set, raw disparity fusion is applied to the disparity regression module")
+                                 help="if set, raw disparity fusion is applied to the model")
         self.parser.add_argument("--baseline",
                                  action="store_true",
                                  help="if set, the baseline model is used")

@@ -6,7 +6,7 @@ import networks
 
 
 class CRDFusionNet(nn.Module):
-    def __init__(self, scale_list, max_disp, img_h, img_w, baseline=False, gen_fusion=False, reg_fusion=True):
+    def __init__(self, scale_list, max_disp, img_h, img_w, baseline=False, fusion=True):
         """
         The high-level module for the whole network
 
@@ -15,8 +15,7 @@ class CRDFusionNet(nn.Module):
         :param img_h: height of the input image
         :param img_w: width of the input image
         :param baseline: if set to True, the baseline model is used. Default to False
-        :param gen_fusion: if set to True, raw disparity fusion applied to cost generation module. Default to False
-        :param reg_fusion: if set to True, raw disparity fusion applied to disparity regression module. Default to True
+        :param fusion: if set to True, raw disparity fusion applied to disparity regression module. Default to True
         """
         super(CRDFusionNet, self).__init__()
         self.models = nn.ModuleDict()
@@ -32,9 +31,9 @@ class CRDFusionNet(nn.Module):
 
         # common modules
         self.models['disp_proc'] = networks.DispProcessor(max_disp_at_scale, down_scale)
-        self.models['cost_gen'] = networks.CostGenerator(max_disp_at_scale, gen_fusion)
+        self.models['cost_gen'] = networks.CostGenerator(max_disp_at_scale)
         self.models['disp_est'] = networks.DispEstimator()
-        self.models['disp_reg'] = networks.DispRegressor(max_disp_at_scale, reg_fusion)
+        self.models['disp_reg'] = networks.DispRegressor(max_disp_at_scale, fusion)
 
     def get_params(self):
         """
@@ -95,10 +94,10 @@ class CRDFusionNet(nn.Module):
         """
         l_feature = self.models['extractor'](l_rgb)
         r_feature = self.models['extractor'](r_rgb)
-        raw_disp_prob, conf = self.models['disp_proc'](raw_disp, conf_mask)
-        cost = self.models['cost_gen'](l_feature[-1], r_feature[-1], raw_disp_prob, conf)
+        low_res_raw_disp, low_res_conf = self.models['disp_proc'](raw_disp, conf_mask)
+        cost = self.models['cost_gen'](l_feature[-1], r_feature[-1])
         cost = self.models['disp_est'](cost)
-        prelim_disp = self.models['disp_reg'](cost, raw_disp_prob, conf)
+        prelim_disp = self.models['disp_reg'](cost, low_res_raw_disp, low_res_conf)
         output = self.models['disp_refine'](l_feature, r_feature, prelim_disp)
         output['prelim_disp'] = prelim_disp
         return output
