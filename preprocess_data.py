@@ -68,10 +68,8 @@ def main(opt):
     elif opt.dataset_name == "SceneFlow":
         preprocessor = preprocessor(dataset_path, opt.max_disp, opt.block_size, opt.match_method, opt.device,
                                     opt.full_ZSAD)
-    elif opt.dataset_name == "realsense":
+    elif opt.dataset_name == "realsense" or opt.dataset_name == "zed":
         preprocessor = preprocessor(dataset_path, opt.device, opt.full_ZSAD, opt.train_val_split_per, opt.random_seed)
-    elif opt.dataset_name == "zed":
-        preprocessor = preprocessor(dataset_path, opt.train_val_split_per, opt.random_seed)
     else:
         print("Cannot find the specified dataset")
         raise RuntimeError
