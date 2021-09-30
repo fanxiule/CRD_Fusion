@@ -24,9 +24,9 @@ def parse_args():
     parser = argparse.ArgumentParser(description="CRD_Fusion KITTI Test Options")
     parser.add_argument("--data_path", type=str, help="directory where datasets are saved",
                         default=os.getenv('data_path'))
-    # default="/home/xfan/Documents/Datasets/")
+    # default=os.path.expanduser("~/Documents/Datasets/"))
     parser.add_argument("--checkpt", type=str, help="directory to pretrained checkpoint files",
-                        default="/home/xfan/Documents/Avidbots/Experiments/CRD_Fusion/models/pretrained/weights_800")
+                        default="models/KITTI2015")
     parser.add_argument("--log_dir", type=str, help="directory to save prediction", default="models")
     parser.add_argument("--model_name", type=str, help="name of folder to save prediction",
                         default="crd_fusion_test")

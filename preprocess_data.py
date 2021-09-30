@@ -10,7 +10,7 @@ def parse_arguments():
                         type=str,
                         help="Directory to the dataset",
                         default=os.getenv('data_path'))
-    # default="/home/xfan/Documents/Datasets/")
+    # default=os.path.expanduser("~/Documents/Datasets/"))
     parser.add_argument("--dataset_name",
                         type=str,
                         help="Name of the dataset",

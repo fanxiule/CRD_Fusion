@@ -12,7 +12,7 @@ class TrainOptions:
                                  type=str,
                                  help="directory where datasets are saved",
                                  default=os.getenv('data_path'))
-        # default="/home/xfan/Documents/Datasets/")
+        # default=os.path.expanduser("~/Documents/Datasets/"))
         self.parser.add_argument("--log_dir",
                                  type=str,
                                  help="directory to save trained model and Tensorboard event",

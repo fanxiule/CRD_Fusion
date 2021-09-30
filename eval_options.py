@@ -11,11 +11,11 @@ class EvalOptions:
                                  type=str,
                                  help="directory where datasets are saved",
                                  default=os.getenv('data_path'))
-        # default="/home/xfan/Documents/Datasets/")
+        # default=os.path.expanduser("~/Documents/Datasets/")
         self.parser.add_argument("--checkpt",
                                  type=str,
                                  help="directory to pretrained checkpoint files",
-                                 default="/home/xfan/Documents/Avidbots/Experiments/CRD_Fusion/models/pretrained/weights_15")
+                                 default="models/SceneFlow")
         self.parser.add_argument("--log_dir",
                                  type=str,
                                  help="directory to save Tensorboard event and optionally the predicted disparity map",
