@@ -17,7 +17,7 @@ def parse_arguments():
                         type=str,
                         help="Directory to the dataset",
                         default=os.getenv('data_path'))
-    # default="/home/xfan/Documents/Datasets/")
+    # default=os.path.expanduser("~/Documents/Datasets/"))
     parser.add_argument("--dataset",
                         type=str,
                         help="Name of the dataset",
@@ -26,7 +26,7 @@ def parse_arguments():
     parser.add_argument("--max_disp",
                         type=int,
                         help="Maximum disparity to generate the SGBM results",
-                        default=128)
+                        default=192)
     # to be consistent with the dataset classes
     parser.add_argument("--resized_height",
                         type=int,
