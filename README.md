@@ -66,11 +66,14 @@ jupyter notebook example.ipynb
 
 ## Datasets
 
-[Scene Flow](https://lmb.informatik.uni-freiburg.de/resources/datasets/SceneFlowDatasets.en.html),
+Public [Scene Flow](https://lmb.informatik.uni-freiburg.de/resources/datasets/SceneFlowDatasets.en.html),
 [KITTI 2012](http://www.cvlibs.net/datasets/kitti/eval_stereo_flow.php?benchmark=stereo),
 and [KITTI 2015](http://www.cvlibs.net/datasets/kitti/eval_scene_flow.php?benchmark=stereo)
-are used in this work. Assuming the root folder for datasets is `~/Documents/Datasets`, move the files according to the
-following structure after downloading the datasets.
+are used in this work. We also collected custom datasets with an Intel RealSense D435 camera and a ZED Mini camera.
+Follow this [repository](https://github.com/fanxiule/stereo_collection) to collect your own custom datasets.
+
+Assuming the root folder for datasets is `~/Documents/Datasets`, move the files according to the following structure
+after downloading/collecting the datasets.
 
 ```
 ~/Documents/Datasets
@@ -93,15 +96,29 @@ following structure after downloading the datasets.
 │   ├── testing
 │   │   ├── colored_0
 │   │   ├── colored_1
-└── kitti2015
-    ├── training
-    │   ├── image_2
-    │   ├── image_3
-    │   ├── disp_noc_0
-    │   ├── disp_occ_0
-    └── testing
-        ├── image_2
-        └── image_3
+├── kitti2015
+│   ├── training
+│   │   ├── image_2
+│   │   ├── image_3
+│   │   ├── disp_noc_0
+│   │   ├── disp_occ_0
+│   ├── testing
+│   │   ├── image_2
+│   │   ├── image_3
+├── realsense
+│   ├── left
+│   │   ├── 0.png
+│   │   ├── ...
+│   ├── right
+│   │   ├── 0.png
+│   │   ├── ...
+└── zed
+    ├── left
+    │   ├── 0.png
+    │   ├── ...
+    └── right
+        ├── 0.png
+        └── ...
 ```
 
 ## Data Preprocessing
@@ -120,8 +137,9 @@ python preprocess_data.py --dataset_path ~/Documents/Datasets/ \
                           --random_seed 75
 ```
 
-Note that you can choose `--dataset_name` from `SceneFlow`, `kitti2012`, and `kitti2015`. Only KITTI 2012/2015
-needs `--train_val_split_per` and `--random_seed` to separate the training set into training and validation splits.
+Note that you can choose `--dataset_name` from `SceneFlow`, `kitti2012`, `kitti2015`, `realsense`, and `zed`. Datasets
+other than `SceneFlow` need `--train_val_split_per` and `--random_seed` to separate the dataset (training set for KITTI)
+into training and validation splits.
 
 ## Training
 
@@ -168,12 +186,34 @@ python train.py --data_path ~/Documents/Datasets/ --log_dir models \
                 --early_log_frequency 20 --late_log_frequency 200 --early_late_split 1000 --save_frequency 200
 ```
 
-This command assumes you have downloaded the model pretrained on Scene Flow or trained your own model. The weights
-should be saved in `models/SceneFlow` or other directory specified by `--pretrained_model_path`. In the
+To fine tune the model on a custom dataset, run
+
+```
+python train.py --data_path ~/Documents/Datasets/ --log_dir models \
+                --model_name train_realsense \
+                --dataset realsense --resized_height 256 --resized_width 512 \
+                --downscale 1 --max_disp 192 --batch_size 8 \
+                --learning_rate 0.0001 --num_epochs 30 --scheduler_step 15 --lr_change_rate 0.5 \
+                --conf_threshold 0.8 --imagenet_norm --feature_downscale 3 --multi_step_upsample \
+                --fusion \
+                --loss_conf \
+                --occ_detection \
+                --supervision_weight 0.7 \
+                --photo_weight 3 \
+                --smooth_weight 0.45 \
+                --occ_weight 0.75 \
+                --occ_epoch -1 --device cuda --num_workers 2 \
+                --pretrained_model_path models/SceneFlow \
+                --early_log_frequency 100 --late_log_frequency 500 --early_late_split 1000 --save_frequency 10
+```
+
+The above fine-tuning commands assume you have downloaded the model pretrained on Scene Flow or trained your own model.
+The weights should be saved in `models/SceneFlow` or other directory specified by `--pretrained_model_path`. In the
 `models/SceneFlow` folder, there should be `adam.pth`, `disp_est.pth`, `disp_refine.pth`, and `extractor.pth`.
-For `--dataset`, You can choose from `kitti2015`, `kitti2015_full`, `kitti2012`, and `kitti2012_full`. Choosing the
-dataset with `_full` means all training images will be used to fine tune the models. For datasets without `_full`, only
-the training split of the training images is used for fine-tuning.
+For `--dataset`, You can choose from `kitti2015`, `kitti2015_full`, `kitti2012`, `kitti2012_full`, `realsense`, `zed`.
+Choosing the dataset with `_full` means all training images will be used to fine tune the models. For datasets
+without `_full`, only the training split of the training images is used for fine-tuning. When `--dataset` is `zed`, set 
+`--num_epochs` to 50 and `--scheduler_step` to 25.
 
 ## Evaluation
 
@@ -189,8 +229,10 @@ python eval.py --data_path ~/Documents/Datasets/ --checkpt models/SceneFlow --lo
 ```
 
 The tensorboard event is saved in `models/eval_SceneFlow` or other directory specified by `--log_dir` and `--model_name`
-Change `--dataset` and `--checkpt` accordingly to evaluate on KITTI 2012/2015. For KITTI datasets,
-set `--resized_height` to 376 and `--resized_width` to 1248.
+Change `--dataset` and `--checkpt` accordingly to evaluate on KITTI 2012/2015 and custom datasets. For KITTI datasets,
+set `--resized_height` to 376 and `--resized_width` to 1248. For datasets collected by RealSense camera,
+set `--resized_height` to 480 and `--resized_width` to 640. For datasets collected by Zed camera, set `--resized_height`
+to 720 and `--resized_width` to 1280
 
 Note that the provided pretrained models for KITTI 2012/2015 have been trained using `kitti2012_full`
 or `kitti2015_full`. Setting `--dataset` to `kitti2012` or `kitti2015` will evaluate the model on the validation split
