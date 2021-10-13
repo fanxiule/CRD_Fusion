@@ -6,7 +6,7 @@ This is the official repository for our paper
 > by Xiule Fan, Soo Jeon, Baris Fidan
 
 Commercially available stereo cameras, which usually rely on traditional stereo matching algorithms, have been widely
-used in robotics and other intelligent systems. Their predicted disparity, which we call raw disparity, often contain
+used in robotic and other intelligent systems. Their predicted disparity, which we call raw disparity, often contain
 errors at ambiguous regions. Despite these errors, we identify that raw disparity can still provide strong prior
 knowledge towards more accurate disparity prediction. We propose a pipeline with two main componennts to fully exploit
 this raw disparity. First a confidence generation step computes the confidence given a raw disparity map. Then a
@@ -58,7 +58,7 @@ CRD_Fusion/
 
 ## Quick Example
 
-The provided jupyter notebook contains a quick example of our pipeline. Run the command below to test it
+The provided jupyter notebook show a quick example of our pipeline. Run the command below to launch the example.
 
 ```
 jupyter notebook example.ipynb
@@ -137,7 +137,7 @@ python preprocess_data.py --dataset_path ~/Documents/Datasets/ \
                           --random_seed 75
 ```
 
-Note that you can choose `--dataset_name` from `SceneFlow`, `kitti2012`, `kitti2015`, `realsense`, and `zed`. Datasets
+You can choose `--dataset_name` from `SceneFlow`, `kitti2012`, `kitti2015`, `realsense`, and `zed`. Datasets
 other than `SceneFlow` need `--train_val_split_per` and `--random_seed` to separate the dataset (training set for KITTI)
 into training and validation splits.
 
@@ -163,7 +163,7 @@ python train.py --data_path ~/Documents/Datasets/ --log_dir models \
 ```
 
 Checkpoints and tensorboard events are saved in `models/train_SceneFlow` or other directory specified by `--log_dir`
-and `--model_name`.
+and `--model_name`. You can use tensorboard to visualize intermediate results.
 
 To fine tune the model on KITTI 2012/2015, run
 
@@ -228,19 +228,21 @@ python eval.py --data_path ~/Documents/Datasets/ --checkpt models/SceneFlow --lo
                --occ_detection
 ```
 
-The tensorboard event is saved in `models/eval_SceneFlow` or other directory specified by `--log_dir` and `--model_name`
+The tensorboard event is saved in `models/eval_SceneFlow` or other directory specified by `--log_dir` and `--model_name`. 
 Change `--dataset` and `--checkpt` accordingly to evaluate on KITTI 2012/2015 and custom datasets. For KITTI datasets,
 set `--resized_height` to 376 and `--resized_width` to 1248. For datasets collected by RealSense camera,
 set `--resized_height` to 480 and `--resized_width` to 640. For datasets collected by Zed camera, set `--resized_height`
 to 720 and `--resized_width` to 1280
 
-Note that the provided pretrained models for KITTI 2012/2015 have been trained using `kitti2012_full`
+The provided pretrained models for KITTI 2012/2015 have been trained using `kitti2012_full`
 or `kitti2015_full`. Setting `--dataset` to `kitti2012` or `kitti2015` will evaluate the model on the validation split
 of the training images, which will lead to biased results.
 
 ## Prediction
 
-Run the following command to make predictions on KITTI 2012/2015 test set and get frame rate of the entire pipelie
+Run the following command to make predictions on KITTI 2012/2015 test set. After executing the command below, the frame 
+rate of the pipeline will be printed out. The frame rate includes both the confidence generation step and forward passes 
+of our CRD-Fusion network.
 
 ```
 python predict_kitti.py --data_path ~/Documents/Datasets/ \
@@ -251,7 +253,7 @@ python predict_kitti.py --data_path ~/Documents/Datasets/ \
                         --save_pred
 ```
 
-Note that even though the preprocessing step already calculates the confidence map for a raw disparity map,
+Although the preprocessing step already calculates the confidence map for a raw disparity map,
 `predict_kitti.py` performs the confidence generation step again so that it is also considered in the runtime. You can
 replace `kitti2015_test` with `kitti2012_test` for KITTI2012. By setting the `--save_pred` flag, the predictions are
 saved in `models/test_kitti2015` or a directory specified by `--log_dir` and `--model_name`. The predicted disparity
@@ -260,5 +262,5 @@ maps are saved in 16-bit `.png` files, while confidence maps and occlusion masks
 ## Acknowledgement
 
 Some of the code is inspired by [MaskFlowNet](https://github.com/microsoft/MaskFlownet) and StereoNet implemented in an
-earlier version of this [repository](https://github.com/meteorshowers/X-StereoLab). We would like thank the original
+earlier version of this [repository](https://github.com/meteorshowers/X-StereoLab). We would like to thank the original
 authors for their amazing works. 
