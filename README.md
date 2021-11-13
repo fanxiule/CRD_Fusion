@@ -174,6 +174,7 @@ python train.py --data_path ~/Documents/Datasets/ --log_dir models \
                 --downscale 1 --max_disp 192 --batch_size 8 \
                 --learning_rate 0.001 --num_epochs 15 --scheduler_step 10 --lr_change_rate 0.1 \
                 --conf_threshold 0.8 --imagenet_norm --feature_downscale 3 --multi_step_upsample \
+                --fusion \
                 --loss_conf \
                 --occ_detection \
                 --supervision_weight 0.7 \
@@ -184,8 +185,8 @@ python train.py --data_path ~/Documents/Datasets/ --log_dir models \
                 --early_log_frequency 200 --late_log_frequency 2000 --early_late_split 4000 --save_frequency 5
 ```
 
-Checkpoints and tensorboard events are saved in `models/train_SceneFlow` or other directory specified by `--log_dir`
-and `--model_name`. You can use tensorboard to visualize the intermediate results.
+Checkpoints and TensorBoard events are saved in `models/train_SceneFlow` or other directory specified by `--log_dir`
+and `--model_name`. You can use TensorBoard to visualize the intermediate results.
 
 To fine tune the model on KITTI 2012/2015, run
 
@@ -229,11 +230,11 @@ python eval.py --data_path ~/Documents/Datasets/ --checkpt models/SceneFlow --lo
 ```
 
 It is assumed that the pretrained weights are saved in `models/SceneFlow`.
-The tensorboard event is saved in `models/eval_SceneFlow` or other directory specified by `--log_dir` and `--model_name`. 
+The TensorBoard event is saved in `models/eval_SceneFlow` or other directory specified by `--log_dir` and `--model_name`. 
 
 To perform evaluation on the validation split of KITTI 2012/2015 datasets, change `--dataset` to `kitti2012` or `kitti2015`, 
 change `--checkpt` to `models/KITTI2012` or `models/KITTI2015`. Lastly, set `--resized_height` to 376 and `--resized_width`
-to 1248.
+to 1248. If you want to save intermediate results as a TensorBoard event, set `--log_frequency` to 5.
 
 <strong>Note</strong>: The provided pretrained models for KITTI 2012/2015 have been trained using `kitti2012_full`
 or `kitti2015_full`. Setting `--dataset` to `kitti2012` or `kitti2015` will evaluate the model on the validation split
