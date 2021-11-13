@@ -5,13 +5,16 @@ This is the official repository for our paper
 >
 > by Xiule Fan, Soo Jeon, Baris Fidan
 
-Commercially available stereo cameras, which usually rely on traditional stereo matching algorithms, have been widely
-used in robotic and other intelligent systems. Their raw (predicted) disparity often contain
-errors at ambiguous regions. Despite these errors, we identify that raw disparity can still provide strong prior
-knowledge towards more accurate disparity prediction. We propose a pipeline with two main componennts to fully exploit
-this raw disparity. First a confidence generation step computes the confidence given a raw disparity map. Then a
-self-supervised stereo matching deep neural network performs occlusion-aware disparity prediction with raw disparity
-fusion guided by confidence.
+Commercially available stereo cameras used in robots and other intelligent systems to obtain depth information typically 
+rely on traditional stereo matching algorithms. Although their raw (predicted) disparity maps contain incorrect estimates, 
+these algorithms can still provide useful prior information towards more accurate prediction. We propose a pipeline to 
+incorporate this prior information to produce more accurate disparity maps. The proposed pipeline includes a confidence 
+generation component to identify raw disparity inaccuracies as well as a self-supervised deep neural network (DNN) to 
+refine the predicted disparity and compute the corresponding occlusion masks. The proposed DNN consists of a feature 
+extraction module, a confidence guided raw disparity fusion module to generate an initial disparity map, and a hierarchical 
+occlusion-aware disparity refinement module to compute the final estimates. Experimental results on public datasets verify 
+that the proposed pipeline has competitive accuracy with real-time processing rate. We also test the pipeline with images 
+captured by commercial stereo cameras to show its effectiveness in improving their raw disparity estimates.
 
 **Proposed Pipeline:**
 
@@ -31,7 +34,7 @@ and run
 conda env create -f environment.yml
 ```
 
-## Pretrained Model
+## Pretrained Models
 
 Each pretrained model is saved in a `.zip` folder. To be consistent with the rest of this document, create a directory
 called `models`. Unzip the pretrained models and place them in `/models`. The file structure should be like the
@@ -58,7 +61,7 @@ CRD_Fusion/
 
 ## Quick Example
 
-The provided jupyter notebook show a quick example of our pipeline. Run the command below to launch the example.
+The provided jupyter notebook shows a quick example of our pipeline. Run the command below to launch the example.
 
 ```
 jupyter notebook example.ipynb
@@ -75,15 +78,52 @@ following structure after downloading the datasets.
 ```
 ~/Documents/Datasets
 ├── SceneFlow
-│   ├── Driving
+│   ├── driving
 │   │   ├── disparity
+│   │   │   ├── 15mm_focallength
+│   │   │   │   ├── scene_backwards
+│   │   │   │   │   ├── fast
+│   │   │   │   │   │   ├── left
+│   │   │   │   │   ├── ...
+│   │   │   │   ├── ...
+│   │   │   ├── ...
 │   │   ├── frames_finalpass
-│   ├── FlyingThings3D
+│   │   │   ├── 15mm_focallength
+│   │   │   │   ├── scene_backwards
+│   │   │   │   │   ├── fast
+│   │   │   │   │   │   ├── left
+│   │   │   │   │   │   ├── ...
+│   │   │   │   │   ├── ...
+│   │   │   │   ├── ...
+│   │   │   ├── ...
+│   ├── flyingthings3d
 │   │   ├── disparity
+│   │   │   ├── TEST
+│   │   │   │   ├── A
+│   │   │   │   │   ├── 0000
+│   │   │   │   │   │   ├── left
+│   │   │   │   │   ├── ...
+│   │   │   │   ├── ...
+│   │   │   ├── ...
 │   │   ├── frames_finalpass
-│   ├── Monkaa
+│   │   │   ├── TEST
+│   │   │   │   ├── A
+│   │   │   │   │   ├── 0000
+│   │   │   │   │   │   ├── left
+│   │   │   │   │   │   ├── ...
+│   │   │   │   │   ├── ...
+│   │   │   │   ├── ...
+│   │   │   ├── ...
+│   ├── monkaa
 │   │   ├── disparity
+│   │   │   ├── eating_x2
+│   │   │   │   ├── left
+│   │   │   ├── ...
 │   │   ├── frames_finalpass
+│   │   │   ├── eating_x2
+│   │   │   │   ├── left
+│   │   │   │   ├── ...
+│   │   │   ├── ...
 ├── kitti2012
 │   ├── training
 │   │   ├── colored_0
@@ -145,7 +185,7 @@ python train.py --data_path ~/Documents/Datasets/ --log_dir models \
 ```
 
 Checkpoints and tensorboard events are saved in `models/train_SceneFlow` or other directory specified by `--log_dir`
-and `--model_name`. You can use tensorboard to visualize intermediate results.
+and `--model_name`. You can use tensorboard to visualize the intermediate results.
 
 To fine tune the model on KITTI 2012/2015, run
 
@@ -172,7 +212,7 @@ This command assumes you have downloaded the model pretrained on Scene Flow or t
 should be saved in `models/SceneFlow` or other directory specified by `--pretrained_model_path`. In the
 `models/SceneFlow` folder, there should be `adam.pth`, `disp_est.pth`, `disp_refine.pth`, and `extractor.pth`.
 For `--dataset`, You can choose from `kitti2015`, `kitti2015_full`, `kitti2012`, and `kitti2012_full`. Choosing the
-dataset with `_full` means all training images will be used to fine tune the models. For datasets without `_full`, only
+dataset with `_full` means all training images will be used to fine tune the model. For datasets without `_full`, only
 the training split of the training images is used for fine-tuning.
 
 ## Evaluation
@@ -188,18 +228,21 @@ python eval.py --data_path ~/Documents/Datasets/ --checkpt models/SceneFlow --lo
                --occ_detection
 ```
 
+It is assumed that the pretrained weights are saved in `models/SceneFlow`.
 The tensorboard event is saved in `models/eval_SceneFlow` or other directory specified by `--log_dir` and `--model_name`. 
-Change `--dataset` and `--checkpt` accordingly to evaluate on KITTI 2012/2015. For KITTI datasets,
-set `--resized_height` to 376 and `--resized_width` to 1248.
 
-The provided pretrained models for KITTI 2012/2015 have been trained using `kitti2012_full`
+To perform evaluation on the validation split of KITTI 2012/2015 datasets, change `--dataset` to `kitti2012` or `kitti2015`, 
+change `--checkpt` to `models/KITTI2012` or `models/KITTI2015`. Lastly, set `--resized_height` to 376 and `--resized_width`
+to 1248.
+
+<strong>Note</strong>: The provided pretrained models for KITTI 2012/2015 have been trained using `kitti2012_full`
 or `kitti2015_full`. Setting `--dataset` to `kitti2012` or `kitti2015` will evaluate the model on the validation split
 of the training images, which will lead to biased results.
 
 ## Prediction
 
 Run the following command to make predictions on KITTI 2012/2015 test set. After executing the command below, the frame 
-rate of the pipeline will be printed out. The frame rate includes both the confidence generation step and forward passes 
+rate of the pipeline will be printed out. The frame rate includes both the confidence generation step and forward pass 
 of our CRD-Fusion network.
 
 ```
@@ -215,9 +258,9 @@ Although the preprocessing step already calculates the confidence map for a raw 
 `predict_kitti.py` performs the confidence generation step again so that it is also considered in the runtime. You can
 replace `kitti2015_test` with `kitti2012_test` for KITTI2012. By setting the `--save_pred` flag, the predictions are
 saved in `models/test_kitti2015` or a directory specified by `--log_dir` and `--model_name`. The predicted disparity
-maps are saved in 16-bit `.png` files, while confidence maps and occlusion masks are saved in `.npy` format.
+maps are saved as 16-bit `.png` files, while confidence maps and occlusion masks are saved in `.npy` format.
 
-## Acknowledgement
+## Acknowledgment
 
 Some of the code is inspired by [MaskFlowNet](https://github.com/microsoft/MaskFlownet) and StereoNet implemented in an
 earlier version of this [repository](https://github.com/meteorshowers/X-StereoLab). We would like to thank the original
