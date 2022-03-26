@@ -93,7 +93,8 @@ class RealSenseDataset(CRDFusionDataset):
         raw_inputs['r_rgb'] = self._get_rgb(r_rgb_path)
         raw_inputs['raw_disp'] = self._get_disp(disp_path)
         raw_inputs['mask'] = self._get_conf(conf_path)
-        raw_inputs['gt_disp'] = self._get_disp(gt_path)
+        if os.path.exists(gt_path):
+            raw_inputs['gt_disp'] = self._get_disp(gt_path)
 
         _, self.orig_height, self.orig_width = raw_inputs['l_rgb'].size()
         assert self.orig_width % self.downscale == 0 and self.orig_height % self.downscale == 0, \
