@@ -4,6 +4,7 @@ This is the official repository for our paper
 > Occlusion-Aware Self-Supervised Stereo Matching with Confidence Guided Raw Disparity Fusion
 >
 > by Xiule Fan, Soo Jeon, Baris Fidan
+> 
 > Conference on Robots and Vision 2022 (Oral)
 
 This branch contains some additional files for custom datasets collected by a RealSense and a Zed camera.
