@@ -4,22 +4,9 @@ This is the official repository for our paper
 > Occlusion-Aware Self-Supervised Stereo Matching with Confidence Guided Raw Disparity Fusion
 >
 > by Xiule Fan, Soo Jeon, Baris Fidan
+> Conference on Robots and Vision 2022 (Oral)
 
-Commercially available stereo cameras, which usually rely on traditional stereo matching algorithms, have been widely
-used in robotic and other intelligent systems. Their predicted disparity, which we call raw disparity, often contain
-errors at ambiguous regions. Despite these errors, we identify that raw disparity can still provide strong prior
-knowledge towards more accurate disparity prediction. We propose a pipeline with two main componennts to fully exploit
-this raw disparity. First a confidence generation step computes the confidence given a raw disparity map. Then a
-self-supervised stereo matching deep neural network performs occlusion-aware disparity prediction with raw disparity
-fusion guided by confidence.
-
-**Proposed Pipeline:**
-
-![](assets/pipeline.png)
-
-**CRD-Fusion:**
-
-![](assets/crd_fusion.png)
+This branch contains some additional files for custom datasets collected by a RealSense and a Zed camera.
 
 ## Installation
 
@@ -31,11 +18,10 @@ and run
 conda env create -f environment.yml
 ```
 
-## Pretrained Model
+## Pretrained Models
 
 Each pretrained model is saved in a `.zip` folder. To be consistent with the rest of this document, create a directory
-called `models`. Unzip the pretrained models and place them in `/models`. The file structure should be like the
-following
+called `models`. Unzip the pretrained models and place them in `/models`. The file structure should be like
 
 ```
 CRD_Fusion/
@@ -54,11 +40,11 @@ CRD_Fusion/
 
 | Scene Flow |  KITTI 2012 | KITTI 2015 | 
 |---|---|---|
-| [OneDrive](https://1drv.ms/u/s!Ai577MWqjhXlkALQ5nGtFYbAtIjP) |  [OneDrive](https://1drv.ms/u/s!Ai577MWqjhXlkARNp8QLZ_vgeqAX) | [OneDrive](https://1drv.ms/u/s!Ai577MWqjhXlkANJvCORCdi3jxnC) | 
+| [OneDrive](https://1drv.ms/u/s!Ai577MWqjhXlkAJgYk_IvF5xPKTs) |  [OneDrive](https://1drv.ms/u/s!Ai577MWqjhXlkARGJeKrgWFGRSbW) | [OneDrive](https://1drv.ms/u/s!Ai577MWqjhXlkAO8x_ffk5u7d-sX) | 
 
-## Quick Example
+## Demo
 
-The provided jupyter notebook show a quick example of our pipeline. Run the command below to launch the example.
+A demo of our is provided by a jupyter notebook. Run the command below to launch the demo.
 
 ```
 jupyter notebook example.ipynb
@@ -66,25 +52,22 @@ jupyter notebook example.ipynb
 
 ## Datasets
 
-Public [Scene Flow](https://lmb.informatik.uni-freiburg.de/resources/datasets/SceneFlowDatasets.en.html),
+[Scene Flow](https://lmb.informatik.uni-freiburg.de/resources/datasets/SceneFlowDatasets.en.html) (final pass),
 [KITTI 2012](http://www.cvlibs.net/datasets/kitti/eval_stereo_flow.php?benchmark=stereo),
 and [KITTI 2015](http://www.cvlibs.net/datasets/kitti/eval_scene_flow.php?benchmark=stereo)
-are used in this work. We also collected custom datasets with an Intel RealSense D435 camera and a ZED Mini camera.
-Follow this [repository](https://github.com/fanxiule/stereo_collection) to collect your own custom datasets.
-
-Assuming the root folder for datasets is `~/Documents/Datasets`, move the files according to the following structure
-after downloading/collecting the datasets.
+are used in this work. Assuming the root folder for the datasets is `~/Documents/Datasets`, move the files according to
+the following structure after downloading the datasets.
 
 ```
 ~/Documents/Datasets
 ├── SceneFlow
-│   ├── Driving
+│   ├── driving
 │   │   ├── disparity
 │   │   ├── frames_finalpass
-│   ├── FlyingThings3D
+│   ├── flyingThings3D
 │   │   ├── disparity
 │   │   ├── frames_finalpass
-│   ├── Monkaa
+│   ├── monkaa
 │   │   ├── disparity
 │   │   ├── frames_finalpass
 ├── kitti2012
@@ -137,9 +120,9 @@ python preprocess_data.py --dataset_path ~/Documents/Datasets/ \
                           --random_seed 75
 ```
 
-You can choose `--dataset_name` from `SceneFlow`, `kitti2012`, `kitti2015`, `realsense`, and `zed`. Datasets
-other than `SceneFlow` need `--train_val_split_per` and `--random_seed` to separate the dataset (training set for KITTI)
-into training and validation splits.
+You can choose `--dataset_name` from `SceneFlow`, `kitti2012`, `kitti2015`, `realsense`, and `zed`. To separate the
+RealSense/Zed dataset or the training set of KITTI 2012/2015 into training and validation splits,
+specify `--train_val_split_per` and `--random_seed`.
 
 ## Training
 
@@ -152,6 +135,7 @@ python train.py --data_path ~/Documents/Datasets/ --log_dir models \
                 --downscale 1 --max_disp 192 --batch_size 8 \
                 --learning_rate 0.001 --num_epochs 15 --scheduler_step 10 --lr_change_rate 0.1 \
                 --conf_threshold 0.8 --imagenet_norm --feature_downscale 3 --multi_step_upsample \
+                --fusion \
                 --loss_conf \
                 --occ_detection \
                 --supervision_weight 0.7 \
@@ -162,8 +146,8 @@ python train.py --data_path ~/Documents/Datasets/ --log_dir models \
                 --early_log_frequency 200 --late_log_frequency 2000 --early_late_split 4000 --save_frequency 5
 ```
 
-Checkpoints and tensorboard events are saved in `models/train_SceneFlow` or other directory specified by `--log_dir`
-and `--model_name`. You can use tensorboard to visualize intermediate results.
+Checkpoints and TensorBoard events are saved in `models/train_SceneFlow` or other directory specified by `--log_dir`
+and `--model_name`. You can use TensorBoard to visualize the intermediate results.
 
 To fine tune the model on KITTI 2012/2015, run
 
@@ -186,34 +170,14 @@ python train.py --data_path ~/Documents/Datasets/ --log_dir models \
                 --early_log_frequency 20 --late_log_frequency 200 --early_late_split 1000 --save_frequency 200
 ```
 
-To fine tune the model on a custom dataset, run
-
-```
-python train.py --data_path ~/Documents/Datasets/ --log_dir models \
-                --model_name train_realsense \
-                --dataset realsense --resized_height 256 --resized_width 512 \
-                --downscale 1 --max_disp 192 --batch_size 8 \
-                --learning_rate 0.0001 --num_epochs 30 --scheduler_step 15 --lr_change_rate 0.5 \
-                --conf_threshold 0.8 --imagenet_norm --feature_downscale 3 --multi_step_upsample \
-                --fusion \
-                --loss_conf \
-                --occ_detection \
-                --supervision_weight 0.7 \
-                --photo_weight 3 \
-                --smooth_weight 0.45 \
-                --occ_weight 0.75 \
-                --occ_epoch -1 --device cuda --num_workers 2 \
-                --pretrained_model_path models/SceneFlow \
-                --early_log_frequency 100 --late_log_frequency 500 --early_late_split 1000 --save_frequency 10
-```
-
-The above fine-tuning commands assume you have downloaded the model pretrained on Scene Flow or trained your own model.
-The weights should be saved in `models/SceneFlow` or other directory specified by `--pretrained_model_path`. In the
+This command assumes you have downloaded the model pretrained on Scene Flow or trained your own model. The weights
+should be saved in `models/SceneFlow` or other directory specified by `--pretrained_model_path`. In the
 `models/SceneFlow` folder, there should be `adam.pth`, `disp_est.pth`, `disp_refine.pth`, and `extractor.pth`.
-For `--dataset`, You can choose from `kitti2015`, `kitti2015_full`, `kitti2012`, `kitti2012_full`, `realsense`, `zed`.
-Choosing the dataset with `_full` means all training images will be used to fine tune the models. For datasets
-without `_full`, only the training split of the training images is used for fine-tuning. When `--dataset` is `zed`, set 
-`--num_epochs` to 50 and `--scheduler_step` to 25.
+For `--dataset`, You can choose from `kitti2015`, `kitti2015_full`, `kitti2012`, `kitti2012_full`, `realsense`,
+and `zed`. Choosing the dataset with `_full` means all training images will be used to fine tune the models. For
+datasets without `_full`, only the training split of the training images is used for fine-tuning. You may need to tune
+some hyperparameters (e.g., weights in the training loss, number of epochs, scheduler step, etc.) to fine tune on your
+custom datasets.
 
 ## Evaluation
 
@@ -228,20 +192,23 @@ python eval.py --data_path ~/Documents/Datasets/ --checkpt models/SceneFlow --lo
                --occ_detection
 ```
 
-The tensorboard event is saved in `models/eval_SceneFlow` or other directory specified by `--log_dir` and `--model_name`. 
-Change `--dataset` and `--checkpt` accordingly to evaluate on KITTI 2012/2015 and custom datasets. For KITTI datasets,
-set `--resized_height` to 376 and `--resized_width` to 1248. For datasets collected by RealSense camera,
-set `--resized_height` to 480 and `--resized_width` to 640. For datasets collected by Zed camera, set `--resized_height`
-to 720 and `--resized_width` to 1280
+It is assumed that the pretrained weights are saved in `models/SceneFlow`. The TensorBoard event is saved
+in `models/eval_SceneFlow` or other directory specified by `--log_dir` and `--model_name`.
 
-The provided pretrained models for KITTI 2012/2015 have been trained using `kitti2012_full`
+To perform evaluation on the validation split of KITTI 2012/2015 datasets, change `--dataset` to `kitti2012`
+or `kitti2015`, change `--checkpt` to `models/KITTI2012` or `models/KITTI2015`. Lastly, set `--resized_height` to 376
+and `--resized_width` to 1248. If you want to save the intermediate results as a TensorBoard event,
+set `--log_frequency` to 5. You can also change `--dataset` to `realsense` or `zed` to evaluate on the custom
+datasets. `--resized_height`, `--resized_width`, and `--checkpt` need to be updated accordingly as well.
+
+<strong>Note</strong>: The provided pretrained models for KITTI 2012/2015 have been trained using `kitti2012_full`
 or `kitti2015_full`. Setting `--dataset` to `kitti2012` or `kitti2015` will evaluate the model on the validation split
 of the training images, which will lead to biased results.
 
 ## Prediction
 
-Run the following command to make predictions on KITTI 2012/2015 test set. After executing the command below, the frame 
-rate of the pipeline will be printed out. The frame rate includes both the confidence generation step and forward passes 
+Run the following command to make predictions on KITTI 2012/2015 test set. After executing the command below, the frame
+rate of the pipeline will be printed out. The frame rate includes both the confidence generation step and forward pass
 of our CRD-Fusion network.
 
 ```
@@ -253,14 +220,29 @@ python predict_kitti.py --data_path ~/Documents/Datasets/ \
                         --save_pred
 ```
 
-Although the preprocessing step already calculates the confidence map for a raw disparity map,
-`predict_kitti.py` performs the confidence generation step again so that it is also considered in the runtime. You can
-replace `kitti2015_test` with `kitti2012_test` for KITTI2012. By setting the `--save_pred` flag, the predictions are
-saved in `models/test_kitti2015` or a directory specified by `--log_dir` and `--model_name`. The predicted disparity
-maps are saved in 16-bit `.png` files, while confidence maps and occlusion masks are saved in `.npy` format.
+You can replace `kitti2015_test`with `kitti2012_test` for KITTI 2012. By setting the `--save_pred` flag, the predictions
+are saved in `models/test_kitti2015` or a directory specified by `--log_dir` and `--model_name`. The predicted disparity
+maps are saved as 16-bit `.png` files, while confidence maps and occlusion masks are saved in `.npy` format.
 
-## Acknowledgement
+<strong>Note</strong>: If you ran the command shown in the <strong>Data Preprocessing</strong> session for KITTI
+2012/2015, the raw disparity maps and confidence maps have already been generated for the test sets.`predict_kitti.py`
+actually performs the confidence generation step again so that it is also considered in the runtime.
+
+## Citation
+
+If you find our work useful for your research, please consider citing our paper.
+
+```
+@inproceedings{crd_fusion,
+  author = {Fan, Xiule and Jeon, Soo and Fidan, Baris},
+  title = {Occlusion-Aware Self-Supervised Stereo Matching with Confidence Guided Raw Disparity Fusion},
+  booktitle = {Conference on Robots and Vision},
+  year = {2022}
+}
+```
+
+## Acknowledgment
 
 Some of the code is inspired by [MaskFlowNet](https://github.com/microsoft/MaskFlownet) and StereoNet implemented in an
 earlier version of this [repository](https://github.com/meteorshowers/X-StereoLab). We would like to thank the original
-authors for their amazing works. 
+authors for their amazing work. 
