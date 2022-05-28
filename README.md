@@ -4,25 +4,7 @@ This is the official repository for our paper
 > Occlusion-Aware Self-Supervised Stereo Matching with Confidence Guided Raw Disparity Fusion
 >
 > by Xiule Fan, Soo Jeon, Baris Fidan
-
-Commercially available stereo cameras used in robots and other intelligent systems to obtain depth information typically 
-rely on traditional stereo matching algorithms. Although their raw (predicted) disparity maps contain incorrect estimates, 
-these algorithms can still provide useful prior information towards more accurate prediction. We propose a pipeline to 
-incorporate this prior information to produce more accurate disparity maps. The proposed pipeline includes a confidence 
-generation component to identify raw disparity inaccuracies as well as a self-supervised deep neural network (DNN) to 
-refine the predicted disparity and compute the corresponding occlusion masks. The proposed DNN consists of a feature 
-extraction module, a confidence guided raw disparity fusion module to generate an initial disparity map, and a hierarchical 
-occlusion-aware disparity refinement module to compute the final estimates. Experimental results on public datasets verify 
-that the proposed pipeline has competitive accuracy with real-time processing rate. We also test the pipeline with images 
-captured by commercial stereo cameras to show its effectiveness in improving their raw disparity estimates.
-
-**Proposed Pipeline:**
-
-![](assets/pipeline.png)
-
-**CRD-Fusion:**
-
-![](assets/crd_fusion.png)
+> Conference on Robots and Vision 2022 (Oral)
 
 ## Installation
 
@@ -37,8 +19,7 @@ conda env create -f environment.yml
 ## Pretrained Models
 
 Each pretrained model is saved in a `.zip` folder. To be consistent with the rest of this document, create a directory
-called `models`. Unzip the pretrained models and place them in `/models`. The file structure should be like the
-following
+called `models`. Unzip the pretrained models and place them in `/models`. The file structure should be like
 
 ```
 CRD_Fusion/
@@ -57,11 +38,11 @@ CRD_Fusion/
 
 | Scene Flow |  KITTI 2012 | KITTI 2015 | 
 |---|---|---|
-| [OneDrive](https://1drv.ms/u/s!Ai577MWqjhXlkALQ5nGtFYbAtIjP) |  [OneDrive](https://1drv.ms/u/s!Ai577MWqjhXlkARNp8QLZ_vgeqAX) | [OneDrive](https://1drv.ms/u/s!Ai577MWqjhXlkANJvCORCdi3jxnC) | 
+| [OneDrive](https://1drv.ms/u/s!Ai577MWqjhXlkAJgYk_IvF5xPKTs) |  [OneDrive](https://1drv.ms/u/s!Ai577MWqjhXlkARGJeKrgWFGRSbW) | [OneDrive](https://1drv.ms/u/s!Ai577MWqjhXlkAO8x_ffk5u7d-sX) | 
 
-## Quick Example
+## Demo
 
-The provided jupyter notebook shows a quick example of our pipeline. Run the command below to launch the example.
+A demo of our is provided by a jupyter notebook. Run the command below to launch the demo.
 
 ```
 jupyter notebook example.ipynb
@@ -69,11 +50,11 @@ jupyter notebook example.ipynb
 
 ## Datasets
 
-[Scene Flow](https://lmb.informatik.uni-freiburg.de/resources/datasets/SceneFlowDatasets.en.html),
+[Scene Flow](https://lmb.informatik.uni-freiburg.de/resources/datasets/SceneFlowDatasets.en.html) (final pass),
 [KITTI 2012](http://www.cvlibs.net/datasets/kitti/eval_stereo_flow.php?benchmark=stereo),
 and [KITTI 2015](http://www.cvlibs.net/datasets/kitti/eval_scene_flow.php?benchmark=stereo)
-are used in this work. Assuming the root folder for datasets is `~/Documents/Datasets`, move the files according to the
-following structure after downloading the datasets.
+are used in this work. Assuming the root folder for the datasets is `~/Documents/Datasets`, move the files according to
+the following structure after downloading the datasets.
 
 ```
 ~/Documents/Datasets
@@ -160,8 +141,8 @@ python preprocess_data.py --dataset_path ~/Documents/Datasets/ \
                           --random_seed 75
 ```
 
-You can choose `--dataset_name` from `SceneFlow`, `kitti2012`, and `kitti2015`. Only KITTI 2012/2015
-needs `--train_val_split_per` and `--random_seed` to separate the training set into training and validation splits.
+You can choose `--dataset_name` from `SceneFlow`, `kitti2012`, and `kitti2015`. Use `--train_val_split_per`
+and `--random_seed` if you want to separate the KITTI 2012/2015 training set into training and validation splits.
 
 ## Training
 
@@ -229,12 +210,13 @@ python eval.py --data_path ~/Documents/Datasets/ --checkpt models/SceneFlow --lo
                --occ_detection
 ```
 
-It is assumed that the pretrained weights are saved in `models/SceneFlow`.
-The TensorBoard event is saved in `models/eval_SceneFlow` or other directory specified by `--log_dir` and `--model_name`. 
+It is assumed that the pretrained weights are saved in `models/SceneFlow`. The TensorBoard event is saved
+in `models/eval_SceneFlow` or other directory specified by `--log_dir` and `--model_name`.
 
-To perform evaluation on the validation split of KITTI 2012/2015 datasets, change `--dataset` to `kitti2012` or `kitti2015`, 
-change `--checkpt` to `models/KITTI2012` or `models/KITTI2015`. Lastly, set `--resized_height` to 376 and `--resized_width`
-to 1248. If you want to save intermediate results as a TensorBoard event, set `--log_frequency` to 5.
+To perform evaluation on the validation split of KITTI 2012/2015 datasets, change `--dataset` to `kitti2012`
+or `kitti2015`, change `--checkpt` to `models/KITTI2012` or `models/KITTI2015`. Lastly, set `--resized_height` to 376
+and `--resized_width`
+to 1248. If you want to save the intermediate results as a TensorBoard event, set `--log_frequency` to 5.
 
 <strong>Note</strong>: The provided pretrained models for KITTI 2012/2015 have been trained using `kitti2012_full`
 or `kitti2015_full`. Setting `--dataset` to `kitti2012` or `kitti2015` will evaluate the model on the validation split
@@ -242,8 +224,8 @@ of the training images, which will lead to biased results.
 
 ## Prediction
 
-Run the following command to make predictions on KITTI 2012/2015 test set. After executing the command below, the frame 
-rate of the pipeline will be printed out. The frame rate includes both the confidence generation step and forward pass 
+Run the following command to make predictions on KITTI 2012/2015 test set. After executing the command below, the frame
+rate of the pipeline will be printed out. The frame rate includes both the confidence generation step and forward pass
 of our CRD-Fusion network.
 
 ```
@@ -255,14 +237,29 @@ python predict_kitti.py --data_path ~/Documents/Datasets/ \
                         --save_pred
 ```
 
-Although the preprocessing step already calculates the confidence map for a raw disparity map,
-`predict_kitti.py` performs the confidence generation step again so that it is also considered in the runtime. You can
-replace `kitti2015_test` with `kitti2012_test` for KITTI2012. By setting the `--save_pred` flag, the predictions are
-saved in `models/test_kitti2015` or a directory specified by `--log_dir` and `--model_name`. The predicted disparity
+You can replace `kitti2015_test`with `kitti2012_test` for KITTI 2012. By setting the `--save_pred` flag, the predictions
+are saved in `models/test_kitti2015` or a directory specified by `--log_dir` and `--model_name`. The predicted disparity
 maps are saved as 16-bit `.png` files, while confidence maps and occlusion masks are saved in `.npy` format.
+
+<strong>Note</strong>: If you ran the command shown in the <strong>Data Preprocessing</strong> session for KITTI 2012/2015, the raw disparity
+maps and confidence maps have already been generated for the test sets.`predict_kitti.py` actually performs the
+confidence generation step again so that it is also considered in the runtime.
+
+## Citation
+
+If you find our work useful for your research, please consider citing our paper.
+
+```
+@inproceedings{crd_fusion,
+  author = {Fan, Xiule and Jeon, Soo and Fidan, Baris},
+  title = {Occlusion-Aware Self-Supervised Stereo Matching with Confidence Guided Raw Disparity Fusion},
+  booktitle = {Conference on Robots and Vision},
+  year = {2022}
+}
+```
 
 ## Acknowledgment
 
 Some of the code is inspired by [MaskFlowNet](https://github.com/microsoft/MaskFlownet) and StereoNet implemented in an
 earlier version of this [repository](https://github.com/meteorshowers/X-StereoLab). We would like to thank the original
-authors for their amazing works. 
+authors for their amazing work. 
